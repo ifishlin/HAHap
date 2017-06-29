@@ -1,22 +1,50 @@
 #!/usr/bin/env python3
-"""
-Build SNP-fragment matrix
+import numpy as np
 
+def print_var_matrix(var_matrix, v_matrix_ids, encoding_table, prange):
+    """
+    """
 
-"""
-import logging
-import sys
-from GHaplo.blocks import main as blocks_main
+    max_list = []
 
-def add_arguments(parser):
-    arg = parser.add_argument
-    arg('variant_file', metavar='VCF', help='VCF file with variants needed to be phased')
-    arg('input_file', metavar='BAM', help='BAM file')
+    #max len in each variance
+    if(var_matrix.shape[0] == 0):
+        sys.exit()
+    for j in range(var_matrix.shape[1]):
+        max_var = 0
+        for i in range(var_matrix.shape[0]):
+            max_var = len(encoding_table[var_matrix[i,j]]) if len(encoding_table[var_matrix[i,j]]) > max_var else max_var
+        max_list.append(max_var)
 
-def main(args):
-    print(args)
-    print(args.variant_file, args.input_file)
-    blocks_main(args)
-    print('in matirx')
-    pass
+    head = '{0:>48s}-'.format('read_id \\ site idx')
+    sys.stdout.write(head)
+    idx = 1
+    for index, j in enumerate(max_list):
+        sys.stdout.write(addpadding(str(idx), j)+' ')
+        idx = idx + 1
+        idx = idx % 10
+    print()
+
+   #print matrix
+    for i in range(var_matrix.shape[0]):
+        head = '{0:>48s}-'.format(v_matrix_ids[i][0])
+        sys.stdout.write(head)
+        if(prange == ':'):
+            for j in range(var_matrix.shape[1]):
+                sys.stdout.write(addpadding(encoding_table[var_matrix[i,j]], max_list[j]) + ',')
+        else:
+            start, end = map(int, prange.split(":"))
+            for j in range(start, end):
+                sys.stdout.write(addpadding(encoding_table[var_matrix[i,j]], max_list[j]) + ',')
+        print()
+
+    return
+
+def addpadding(seq, l):
+    if(l > len(seq)):
+        for i in range(l-len(seq)):
+            seq = seq + ' '
+
+    return seq
+
 
