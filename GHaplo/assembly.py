@@ -2,6 +2,7 @@ import numpy as np
 import operator
 import copy
 import logging
+import sys
 
 b_threshold=3
 local_brute=True
@@ -108,12 +109,8 @@ def get_maxscore_between_segments(group1, group2, mut_info, rank):
 
     sorted_x = sorted(rank_dict.items(), key=operator.itemgetter(1), reverse=True)
 
-    print("get_maxscore_between_segments")
-    print(rank_dict.items())
-    print(sorted_x)
 
     a ,b = sorted_x[rank][0].split("_")
-    #print(a,b,sorted_x[rank][1])
 
     return int(a), int(b), sorted_x[rank][1]
 
@@ -191,15 +188,6 @@ def choice_haplos(observed_pairs_dict, cluster1, cluster2, idx_in_c1, idx_in_c2,
 
     sorted_x = sorted(observed_pairs_dict.items(), key=operator.itemgetter(1,0), reverse=True)
 
-    print(observed_pairs_dict)
-    print(sorted_x)
-
-    print("choice_haplos")
-    print(cluster1)
-    print(cluster2)
-    print(idx_in_c1)
-    print(idx_in_c2)
-
     h1, h2 = hc_merge_haplo(sorted_x, 
                                   c1_anchor, 
                                   c2_anchor, 
@@ -216,15 +204,8 @@ def choice_haplos(observed_pairs_dict, cluster1, cluster2, idx_in_c1, idx_in_c2,
 def hc_merge_haplo(sorted_x, c1_anchor, c2_anchor, idx_in_c1, idx_in_c2, cluster1, cluster2, sv_dict, phase_variants_location_list, reference, encoding_tb, heter, hratio, pv_dict, variant_num):
     """
     """
-    print("-----")
-    print(c1_anchor, c2_anchor, "m"+str(idx_in_c1),"m"+str(idx_in_c2))
-    print(cluster1.name, cluster1.h1, cluster1.h2)
-    print(cluster2.name, cluster2.h1, cluster2.h2)
-    print(sorted_x)
-    print(reference)
 
     if idx_in_c1 >= idx_in_c2:
-        print("TERRIBLE")
         sys.exit()
 
     swap = lambda x, i, j: (x[0], x[1]) if i < j else (x[1], x[0])
@@ -273,12 +254,6 @@ def hc_merge_haplo(sorted_x, c1_anchor, c2_anchor, idx_in_c1, idx_in_c2, cluster
 
     sol = solutions
 
-    print("solutions")
-    print(solutions)
-    print(tmp_read_count)
-    print(tmp_solutions)
-    print("variant_num:",variant_num)
- 
     ## i think it's necessary
     result = []
 
@@ -313,7 +288,6 @@ def hc_merge_haplo(sorted_x, c1_anchor, c2_anchor, idx_in_c1, idx_in_c2, cluster
 
     elif c1_anchor != None and c2_anchor == None:
 
-        print(c2_anchor == None)
         e_maj, e_min = list(map(lambda h: encoding_tb[h], reference[shift][1:]))
 
         for s in solutions:
@@ -358,13 +332,8 @@ def hc_merge_haplo(sorted_x, c1_anchor, c2_anchor, idx_in_c1, idx_in_c2, cluster
                 logging.error("merge error")
                 sys.exit() 
 
-
-        print("new result")
-        print(result)
-
     elif c1_anchor == None and c2_anchor != None:
 
-        print("c1_anchor == None")
         f_maj, f_min = list(map(lambda h: encoding_tb[h], reference[base][1:]))
 
         for s in solutions:
@@ -408,9 +377,6 @@ def hc_merge_haplo(sorted_x, c1_anchor, c2_anchor, idx_in_c1, idx_in_c2, cluster
         c1_name_list = list(map(int,cluster1.name.split("_")))
         c2_name_list = list(map(int,cluster2.name.split("_")))
 
-        print(c1_name_list)
-        print(c2_name_list)
-
         seam_point_count = 0
         if len(c1_name_list) > len(c2_name_list):
             for c in c2_name_list:
@@ -421,9 +387,6 @@ def hc_merge_haplo(sorted_x, c1_anchor, c2_anchor, idx_in_c1, idx_in_c2, cluster
                 seam_point_count = seam_point_count + 1 if c-1 in c2_name_list else seam_point_count
                 seam_point_count = seam_point_count + 1 if c+1 in c2_name_list else seam_point_count
             
-        print("seam_point_count")
-        print(seam_point_count) 
-        print(variant_num)
  
         if seam_point_count > b_threshold and local_brute: 
             # first four for voting(sorted), last four for return (non-sorted)
@@ -461,9 +424,6 @@ def hc_merge_haplo(sorted_x, c1_anchor, c2_anchor, idx_in_c1, idx_in_c2, cluster
                             penalty_1 += vote_haplotype(sol1_h1, sol1_h2, pv, c1, c1+1, sorted_name)
                             penalty_2 += vote_haplotype(sol2_h1, sol2_h2, pv, c1, c1+1, sorted_name)
 
-            print("penalty_1:", penalty_1)
-            print("penalty_2:", penalty_2)
-
             '''
             penalty_1 = 0
             penalty_2 = 0
@@ -500,29 +460,21 @@ def hc_merge_haplo(sorted_x, c1_anchor, c2_anchor, idx_in_c1, idx_in_c2, cluster
                         n2 = cluster1.h2 + cluster2.h2
                         result = [n1, n2]
                         break 
-                        # c1.h1 + c2.h1
-                        # c1.h2 + c2.h2
                     elif [m3, m1] == c1_anchor and [m2, m4] == c2_anchor:
                         n1 = cluster1.h1 + cluster2.h2
                         n2 = cluster1.h2 + cluster2.h1
                         result = [n1, n2]
                         break 
-                        # c1.h1 + c2.h2
-                        # c1.h2 + c2.h1
                     elif [m1, m3] == c1_anchor and [m4, m2] == c2_anchor:
                         n1 = cluster1.h1 + cluster2.h2
                         n2 = cluster1.h2 + cluster2.h1
                         result = [n1, n2]
                         break 
-                        # c1.h1 + c2.h2
-                        # c1.h2 + c2.h1
                     elif [m3, m1] == c1_anchor and [m4, m2] == c2_anchor:
                         n1 = cluster1.h1 + cluster2.h1
                         n2 = cluster1.h2 + cluster2.h2
                         result = [n1, n2]
                         break 
-                        # c1.h1 + c2.h1
-                        # c1.h2 + c2.h2
 
                 elif len(s) == 1:
 
@@ -556,7 +508,6 @@ def hc_merge_haplo(sorted_x, c1_anchor, c2_anchor, idx_in_c1, idx_in_c2, cluster
         logging.error("merge error")
         sys.exit()
 
-    print("result:", result)
     # Merge Failure
     if(len(result) < 2):
         logging.warning("Merge Fail, Can't find two haplo that connect both sides " + str(idx_in_c1) + ' ' + str(idx_in_c2))
@@ -568,7 +519,6 @@ def hc_merge_haplo(sorted_x, c1_anchor, c2_anchor, idx_in_c1, idx_in_c2, cluster
 def vote_haplotype(h1, h2, pv, sidx, bidx, sorted_name):
     """
     """
-    #print("_vote_haplotype")
     sol1 = (h1[sorted_name.index(sidx)], h1[sorted_name.index(bidx)])
     sol2 = (h2[sorted_name.index(sidx)], h2[sorted_name.index(bidx)])
 
@@ -577,12 +527,9 @@ def vote_haplotype(h1, h2, pv, sidx, bidx, sorted_name):
         m1, m2 = list(map(int,k.split('_')))
         if (m1, m2) == sol1 or (m1, m2) == sol2:
             pass
-            #print("match")
         elif m1 in sol1 or m1 in sol2 or m2 in sol1 or m2 in sol2:
-            #print("half match")
             penalty = penalty + v
         else:
-            #print("not match")
             penalty = penalty + 2*v
     return penalty
 
@@ -601,9 +548,6 @@ def build_two_possible_sol(cluster1, cluster2):
     sol2_h2 = list()
 
     sorted_name = sorted(template_name)
-
-    print("template_name:", template_name)
-    print("sorted_name:", sorted_name)
 
     for s in sorted_name:
         idx = template_name.index(s)
@@ -629,9 +573,6 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
     # score_matrix_lookup     : copy of original matrix. change value to np.NINF,
     #                     when the pair merge fail in process 
     ##
-    #print('heter:', heter)
-    print("score_matrix")
-    print(score_matrix)
     score_matrix_reduced = copy_score_matrix(score_matrix)
     score_matrix_lookup  = copy_score_matrix(score_matrix)
     variant_num = len(score_matrix)
@@ -691,7 +632,6 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
                 node = hc_create_parent_node(cluster1, cluster2)
                 node.h1, node.h2 = choice_haplos(observed_pairs_dict, cluster1, cluster2, idx_in_c1, idx_in_c2, sv_dict, phase_variants_location_list, phase_variants_called_list, encoding_tb, heter, hratio, pv_dict, variant_num)
 
-                #print("+++",node.h1, node.h2)
                 #careful for end condition? only one None?
                 if(node.h1 != None and node.h2 != None):
                     break
@@ -722,25 +662,14 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
         ##
         #  re-arrange?
         ##
-        print("re-arrange")
-        print(node.h1)
-        print(node.h2)
-        print("name")
-        print(node.name)
         t = node.name.split("_")
         tmp = sorted(map(int, node.name.split("_")))
         tmp_name = "_".join(map(str, tmp))
-        print("tmp_name")
-        print(tmp_name)
         h1 = list()
         h2 = list()
         for i in tmp:
             h1.append(node.h1[t.index(str(i))])
             h2.append(node.h2[t.index(str(i))])
-
-        print(h1)
-        print(h2)
-
 
         # ? node.name should always be in pl?
         #delete old name of the node
@@ -749,9 +678,6 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
         node.h1 = h1
         node.h2 = h2
         node.name = tmp_name
-        print(node.name)
-        print(node.h1)
-        print(node.h2)
 
         ##
         # Put new node into pool, and remove old two from it.
@@ -784,16 +710,47 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
         # Reduce process, keep base, remove shift
         ##
         score_matrix_reduced = reduce_matrix(score_matrix_reduced, base, shift)
-        print("score_matrix_reduced sharp:", score_matrix_reduced.shape)
 
     return loss_list, threshold_list, connected_list, observed_list
 
 
+def save_phasing(chrom, vars_cddt_pl, encoding_tb, phase_variants_location_list, output_dict):
+    """
+    """
 
-def rebuild_haplo(vars_cddt_pl, encoding_tb, vars2idx_mp, vars_dict, sv_dict):
+    for k, v in vars_cddt_pl.items():
+
+        cluster_name = k
+        cluster_node = v
+       
+        cluster_name_seq = list(map(int, cluster_name.split("_")))
+        cluster_name_seq_sorted = sorted(cluster_name_seq)
+
+        h1 = cluster_node.h1
+        h2 = cluster_node.h2
+
+        # single variant
+        if h1 == None or h2 == None:
+            continue
+
+        ps_id = phase_variants_location_list[cluster_name_seq_sorted[0]]
+
+        for s in cluster_name_seq_sorted:
+            location = str(phase_variants_location_list[s])
+            idx = cluster_name_seq.index(s)
+            h1_allele = h1[idx]
+            h2_allele = h2[idx]
+
+            output_dict['_'.join([location])] = (ps_id, h1_allele, h2_allele)
+
+    return output_dict
+
+def rebuild_haplo(chrom, vars_cddt_pl, encoding_tb, phase_variants_location_list, vars_dict, sv_dict):
     """
     """
     print('======', len(vars_cddt_pl), '=====')
+
+    print(vars_cddt_pl)
 
     sorted_dict = dict()
     for key, haplo in vars_cddt_pl.items():
@@ -806,13 +763,14 @@ def rebuild_haplo(vars_cddt_pl, encoding_tb, vars2idx_mp, vars_dict, sv_dict):
     ps_name = None
     a = collections.OrderedDict(sorted(sorted_dict.items()))
     for key, content in a.items():
+        print(key, content)
         key_o = content[0].split('_')
         key_s = sorted(map(int, key_o))
         haplo = content[1]
 
         if(haplo.h1 == None):
             '''
-            key_out = list(map(lambda y: vars2idx_mp[y], key_s))
+            key_out = list(map(lambda y: phase_variants_location_list[y], key_s))
             print('\t'.join(map(str,[key_s[0], key_out[0], 'N', 'N'])))
             print('==============')
             '''
@@ -826,12 +784,13 @@ def rebuild_haplo(vars_cddt_pl, encoding_tb, vars2idx_mp, vars_dict, sv_dict):
             haplo1_out.append(haplo1[key_o.index(str(i))])
             haplo2_out.append(haplo2[key_o.index(str(i))])
 
-        key_out = list(map(lambda y: vars2idx_mp[y], key_s))
+        key_out = list(map(lambda y: phase_variants_location_list[y], key_s))
 
         if(ps_name == None):
             ps_name = key_out[0]
 
         for i in range(len(key_s)):
+            
             b = sv_dict[key_out[i]]
             h = "homo " if haplo1_out[i] == haplo2_out[i] else "heter"
             s = [(encoding_tb[k], v) for k, v  in b.items()]

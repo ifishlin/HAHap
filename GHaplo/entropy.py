@@ -7,23 +7,14 @@ import operator
 import copy
 from GHaplo.math import normalized_score_scale_to_max
 
-EMPTY_CODE = 0
-GAP_CODE = 6
-MISSING_CODE = [EMPTY_CODE, GAP_CODE]
-
 def create_sv_freq_dict(read_lst, var_lst, read_mtx):
     """
     Collect single variant infomation
 
     """
+    EMPTY_CODE = 0
     sv_freq_dict = OrderedDict()
 
-    print("read_lst")
-    print(read_lst)
-    print("var_lst")
-    print(var_lst)
-
-    #print(read_lst)
     for ridx, read in enumerate(read_lst):
         for vidx in range(read[1], read[2] + 1):
             if(read_mtx[ridx, vidx] == EMPTY_CODE):
@@ -52,6 +43,10 @@ def create_pv_freq_dict(read_lst, var_lst, read_mtx):
     Collect all variants pair information
 
     """
+    EMPTY_CODE = 0
+    GAP_CODE = 6
+    MISSING_CODE = [EMPTY_CODE, GAP_CODE]
+
     var_amount = len(var_lst)
     phase_pairs_called_list = OrderedDict()
 
@@ -93,16 +88,15 @@ def calc_score_matrix(phase_pairs_called_list, phase_variants_called_list, encod
     Calc_priority_of_solutions:
     Calculate based on solutions(two unconficted outcomes).
     """
-
     ## create score_matrix
     variants_number = len(phase_variants_called_list)
     score_matrix = np.empty(shape=(variants_number, variants_number))
     score_matrix[:] = np.NINF
 
-    print("phase_pairs_called_list")
     ## Quartile Q2
     pairs_values = map(lambda p: p.values(), phase_pairs_called_list.values())
     pairs_values_sorted = sorted([item for sublist in pairs_values for item in sublist])
+
     q2 = pairs_values_sorted[len(pairs_values_sorted)//4]
     pairs_count = sum(pairs_values_sorted)
 

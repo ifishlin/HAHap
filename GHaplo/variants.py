@@ -191,20 +191,6 @@ class InputVcfReader(object):
             except (ValueError, TypeError) as error:
                 allele = '-'
                 pass
-            '''
-
-            for aligned in aligned_pairs:
-                if aligned[1] == loci - 1:
-                    if(aligned[0] == None):
-                        allele = '-'
-                        break
-
-                    allele = read.seq[aligned[0]]
-
-                    if(allele not in ref and trust == True):
-                        allele = '-'
-                        break
-            '''
 
             timer.stop('aligned_pairs')
 
