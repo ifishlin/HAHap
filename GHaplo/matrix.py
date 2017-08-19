@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import numpy as np
+import sys
 
 def print_var_matrix(var_matrix, v_matrix_ids, encoding_table, prange):
     """

@@ -6,8 +6,6 @@ import os
 logger = logging.getLogger()
 
 def output_CCs2VCF(connected_components, cc_allele_Mm, cc_idx_list, chrom=1):
-    """
-    """
     for cc in connected_components:
        vcf_file = open(str(cc[0]) + ".in.vcf", 'w')
        for locus in cc:
@@ -33,7 +31,7 @@ def output_phasing2VCF(input_vcf, output_file, output_dict, chrom, encoding_tabl
         for line in input_file:
             #line = line.strip()
             e = line.split('\t')
-            if chrom == e[0] and e[1] in output_dict:
+            if chrom == e[0] and e[1] in output_dict and len(e[3]) < 2 and len(e[4]) < 2:
                 ps_id, h1, h2 = output_dict[e[1]]
                 ps_id = str(ps_id)
                 h1 = '1' if encoding_table[h1] == e[3] else '2'
@@ -47,12 +45,9 @@ def output_phasing2VCF(input_vcf, output_file, output_dict, chrom, encoding_tabl
 
         input_file.close()
 
-def output_cc2csv(output_file, chrom, connected_components, cc_idx, block_min=5):
+def output_cc2csv(output_file, chrom, connected_components, cc_idx, block_min=2):
     """
     """
-    if os.path.isfile(output_file):
-        os.remove(output_file)
-
     chrom = str(chrom)
     with open(output_file, "a") as myfile:
         serial = 0
@@ -103,6 +98,11 @@ def split_vcf_by_chrom(variant_file, indel=False):
         else:
             if pre_location == i:
                 logger.warning("duplicate location " + i)
+                while locus_list[-1] == int(pre_location):
+                    logger.warning("DELETE")
+                    del locus_list[-1]
+                    del locus_Mm_list[-1]
+                    del locus_idx_list[-1]
                 continue
 
             pre_location = i
@@ -111,6 +111,7 @@ def split_vcf_by_chrom(variant_file, indel=False):
             locus_idx_list.append(i)
 
     variant_chrom_dict[int(current_chrom)] = [locus_list, locus_Mm_list, locus_idx_list]
+    #print(locus_list)
 
     return variant_chrom_dict
 

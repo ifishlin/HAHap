@@ -76,8 +76,8 @@ class InputVcfReader(object):
         phase_input = self.cc_input
 
         timer.start('readmtx_init')
-        phase_variants_location_list = list(map(lambda x:x[1], phase_input))
-        phase_variants_called_list = list(map(lambda x:(x[4],x[5],x[6]), phase_input))
+        phase_variants_location_list = [x[1] for x in phase_input]
+        phase_variants_called_list = [(x[4],x[5],x[6]) for x in phase_input]
         phase_fragments_dict = OrderedDict()
         timer.stop('readmtx_init')
         #logging.info("start _read_variance")
@@ -88,8 +88,13 @@ class InputVcfReader(object):
 
         #timer.start('read_variance')
         # Read from Pysam
-        for vd in phase_input:
-            self._read_variance(vd[0], vd[1], vd[2], vd[3], phase_fragments_dict, (vd[5], vd[6]), self.trust, timer)
+        #for vd in phase_input:
+        #    self._read_variance(vd[0], vd[1], vd[2], vd[3], phase_fragments_dict, (vd[5], vd[6]), self.trust, timer)
+ 
+        self._read_variance_faster(phase_input, phase_fragments_dict, self.trust, timer)
+        #print('read_variance_faster')
+        #print(len(phase_fragments_dict))
+
         #timer.stop('read_variance')
 
         # Close Pysam
@@ -98,6 +103,7 @@ class InputVcfReader(object):
         timer.start('clear_matrix')
         self._clear_matrix(phase_fragments_dict)
         timer.stop('clear_matrix')
+
 
         #logging.info("start _read_matrix")
         #read_matrix = np.zeros(shape=(len(phase_fragments_dict), len(phase_variants_location_list)), dtype='int')
@@ -129,11 +135,150 @@ class InputVcfReader(object):
         for x in noninfo:
             del phase_fragments_dict[x]
 
+
+    def _read_variance_faster(self, variances, phase_fragments_dict, trust, timer):
+        """
+        Read raw NGS data of each variants from sam file.
+
+        """
+        variances_location = [v[1] for v in variances]
+        location_ref = [(v[5], v[6]) for v in variances]
+
+        chrom = variances[0][0]
+        # 0-base, end value not included
+        variance_first_location = variances_location[0] - 1
+        variance_last_location  = variances_location[-1]
+
+        visited_set = set()
+        removed_set = set()
+
+        timer.start('fetch')
+        #print('fetch from ', chrom, variance_first_location, variance_last_location)
+        for read in self.reads_proxy.fetch(chrom, variance_first_location, variance_last_location):
+            timer.stop('fetch')
+            if(read.mapping_quality < self.min_read_quality):
+                continue
+
+            if not read.is_proper_pair:
+                continue
+
+            if read.is_read1 == True:
+                read_id = read.query_name + "_" + str(read.next_reference_start)
+            else:
+                read_id = read.query_name + "_" + str(read.reference_start)
+ 
+            flag = False
+            if read_id == '---':
+                print(read.is_read1)
+                flag = True
+
+
+            allele = ''
+
+            aligned_pairs = read.get_aligned_pairs()
+            timer.start('aligned_pairs')
+            aligned = [i[1] for i in aligned_pairs]
+            timer.stop('aligned_pairs')
+
+
+            for var_idx, v in enumerate(variances_location):
+                v_0_base = v-1
+                # switch to binary search
+                if v_0_base > read.reference_end - 1: #one past last alignment
+                    break
+                if v_0_base < read.reference_start:
+                    continue
+
+                if v_0_base in range(read.reference_start, read.reference_end):
+                    aligned_idx = aligned.index(v_0_base)
+                    if aligned_pairs[aligned_idx][0] == None:
+                        ## gap in read
+                        observed = '-'
+                    else:
+                        observed = read.seq[aligned_pairs[aligned_idx][0]]
+
+                    if flag:
+                        print("observed", observed)
+
+                    if(observed not in location_ref[var_idx] and trust == True):
+                        allele = '-'
+                    else:
+                        allele = observed
+
+                    if flag:
+                        print("allele", allele)
+
+                    timer.start('phase_fragments_dict')
+                    if read_id in visited_set:
+                       is_pair_read = True
+                    else:
+                       is_pair_read = False
+                       visited_set.add(read_id)
+
+                    if(read_id in phase_fragments_dict):
+                        if not is_pair_read:
+                            phase_fragments_dict[read_id].append((chrom, v, allele, ''))
+                        else:
+                            fragment = phase_fragments_dict[read_id]
+                            exist     = [i[1] for i in fragment]
+                            observeds = [i[2] for i in fragment]
+                            if v in exist and allele != observeds[exist.index(v)]:
+                                removed_set.add(read_id)
+                                break
+                            elif v in exist:
+                                continue
+                            else:
+                                fragment.append((chrom, v, allele, '')) 
+                    else:
+                        phase_fragments_dict[read_id] = [(chrom, v, allele, '')]
+
+                    '''
+                    if(read_id in phase_fragments_dict):
+                        exist     = list(map(lambda i:i[1],phase_fragments_dict[read_id]))
+                        observeds = list(map(lambda i:i[2],phase_fragments_dict[read_id]))
+                        if v in exist and allele != observeds[exist.index(v)]:
+                            removed_set.add(read_id) 
+                        elif v in exist:
+                            continue
+                        else:
+                            phase_fragments_dict[read_id].append((chrom, v, allele, ''))
+                    else:
+                        phase_fragments_dict[read_id] = [(chrom, v, allele, '')]
+                    timer.stop('phase_fragments_dict')
+                    '''
+
+            timer.start('fetch')
+        timer.stop('fetch')
+        timer.start('removed_set')
+
+        '''
+        for k, v in phase_fragments_dict.items():
+            print(k,v)
+        '''
+
+        '''
+        def test(i):
+            del phase_fragments_dict[i]
+
+        map(lambda i:return del phase_fragments_dict[i], removed_set)
+        '''
+        for i in removed_set:
+            del phase_fragments_dict[i]
+        timer.stop('removed_set')
+
+        
+
+        return
+
+
+    ####
     def _read_variance(self, chrom, loci, extend_len, var_type, phase_fragments_dict, ref, trust, timer):
         """
         Read raw NGS data of each variants from sam file.
 
         """
+
+        print('aaaa')
 
         removed_set = set()
         # (loci - 1) in array = loci in seqs
@@ -141,6 +286,8 @@ class InputVcfReader(object):
         for read in self.reads_proxy.fetch(chrom, loci - 1, loci):
             timer.stop('fetch')
             #read quality filter
+
+            print(read.query_name)
 
             if(read.mapping_quality < self.min_read_quality):
                 continue
@@ -169,6 +316,8 @@ class InputVcfReader(object):
             else:
                 read_id = read.query_name + "_" + str(read.reference_start)
 
+
+            print(read_id)
 
             timer.start('aligned_pairs')
 

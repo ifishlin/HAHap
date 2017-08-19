@@ -562,7 +562,7 @@ def build_two_possible_sol(cluster1, cluster2):
 
 
 
-def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_variants_location_list, phase_variants_called_list, encoding_tb, heter, hratio):
+def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_variants_location_list, phase_variants_called_list, encoding_tb, heter, hratio, timer):
     """
     Args:
     Return:
@@ -573,8 +573,10 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
     # score_matrix_lookup     : copy of original matrix. change value to np.NINF,
     #                     when the pair merge fail in process 
     ##
+    timer.start('copy_matrix_1')
     score_matrix_reduced = copy_score_matrix(score_matrix)
     score_matrix_lookup  = copy_score_matrix(score_matrix)
+    timer.stop('copy_matrix_1')
     variant_num = len(score_matrix)
 
     stop_flag = False
@@ -586,6 +588,7 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
     observed_list = []
 
     while not stop_flag:
+        timer.start('get_maxscore')
         base, shift, score = get_maxscore(score_matrix_reduced)
         if(score == np.NINF):
             break
@@ -596,6 +599,7 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
         group2_id = vars_cddt_mp[shift]
         group1_num = len(group1_id.split("_"))
         group2_num = len(group2_id.split("_"))
+        timer.stop('get_maxscore')
 
         ##
         # Try each combination from high score to low score.
@@ -603,8 +607,9 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
         # else find next until no possible pair.
         ##
         for rank in range(0, group1_num * group2_num):
-
+            timer.start('get_maxscore_between_segments') 
             idx_in_c1, idx_in_c2, score = get_maxscore_between_segments(group1_id, group2_id, score_matrix_lookup, rank)
+            timer.stop('get_maxscore_between_segments')
 
             if idx_in_c1 < idx_in_c2:
                 cluster1 = vars_cddt_pl[group1_id]
@@ -621,8 +626,8 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
             if(score == np.NINF):
                 break
 
+            timer.start('choice_haplos')
             if pv_key in pv_dict:
-
                 observed_pairs_dict = pv_dict[pv_key]
            
                 ## switch clusters
@@ -640,11 +645,13 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
                 logging.error("can't find in pv_dict")
                 sys.exit()
 
+            timer.stop('choice_haplos')
         ##
         # If two segment can't merge together in previous step,
         # remove it from lookup matrix, then this pair wouldn't be considered again.
         # remove it from reduced matrix. (segment-wised)
         ##
+        timer.start('rearrange')
         if(node.h1 == None and node.h2 == None):
             score_matrix_lookup[idx_in_c1][idx_in_c2] = np.NINF
             score_matrix_lookup[idx_in_c2][idx_in_c1] = np.NINF
@@ -706,10 +713,13 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
         vars_cddt_mp[base] = tmp_name
         del vars_cddt_mp[shift]
 
+        timer.stop('rearrange')
         ##
         # Reduce process, keep base, remove shift
         ##
+        timer.start('reduce_matrix')
         score_matrix_reduced = reduce_matrix(score_matrix_reduced, base, shift)
+        timer.stop('reduce_matrix')
 
     return loss_list, threshold_list, connected_list, observed_list
 

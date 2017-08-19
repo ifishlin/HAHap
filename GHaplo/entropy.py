@@ -97,8 +97,16 @@ def calc_score_matrix(phase_pairs_called_list, phase_variants_called_list, encod
     pairs_values = map(lambda p: p.values(), phase_pairs_called_list.values())
     pairs_values_sorted = sorted([item for sublist in pairs_values for item in sublist])
 
-    q2 = pairs_values_sorted[len(pairs_values_sorted)//4]
-    pairs_count = sum(pairs_values_sorted)
+    try:
+
+        q2 = pairs_values_sorted[len(pairs_values_sorted)//4]
+        pairs_count = sum(pairs_values_sorted)
+    except:
+        print(phase_pairs_called_list)
+        print(phase_variants_called_list)
+        print(pairs_values_sorted)
+        print(len(pairs_values_sorted)//4)
+        sys.exit()
 
     ## calculate average ave_coverage
     pairs_count = sum(pairs_values_sorted)

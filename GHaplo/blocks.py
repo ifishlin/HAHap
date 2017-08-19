@@ -5,6 +5,11 @@ Search SNPs blocks and then output to stdout or to main prog.
 import logging
 import sys
 import pysam
+#from concurrent.futures import ProcessPoolExecutor
+
+#def func(i):
+#    return i[1]
+
 
 BAM_CMATCH = 0
 BAM_CINS   = 1
@@ -73,8 +78,10 @@ def add_arguments(parser):
     arg('input_file', metavar='BAM', help='BAM file')
 
 
-def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list):
-  
+def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list, timer):
+
+    #ee = ProcessPoolExecutor()
+ 
     locus_list.append(sys.maxsize)
     len_locus = len(locus_list)
     locus_listed_dict = [set() for i in range(len_locus - 1)]
@@ -92,7 +99,9 @@ def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list):
 
     read_map = dict()
 
-    iter1 = samfile.fetch(reference=chrom, start=locus_list[0], end=locus_list[-2]+1)
+    #print('fetch from ',chrom, locus_list[0]-1, locus_list[-2])
+    #0-based, end value not included
+    iter1 = samfile.fetch(reference=chrom, start=locus_list[0]-1, end=locus_list[-2])
 
     logger.info("hash implement")
     pre_locus = 0
@@ -100,12 +109,25 @@ def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list):
     c = 0
     for read in iter1:
         if read.is_proper_pair:
+        #if True:
+            timer.start('pre')
             connected = set()
-            s = read.reference_start
+            s = read.reference_start + 1 # transfer 1-base to 0-base
             if read.is_read1 == True:
                 key = read.query_name + "_" + str(read.next_reference_start)
             else:
                 key = read.query_name + "_" + str(read.reference_start)
+
+            #if read.cigartuples == None:
+            #    continue
+
+            target = '==='
+
+            flag = False
+            if key == target:
+                flag = True
+                print(read.query_name)
+                print(read.is_read1)
 
             if s > pre_locus:
                 c = b_search_while(locus_list, s)
@@ -113,47 +135,53 @@ def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list):
                 pre_locus = locus_list[c]
             else:
                 c = pre_c
+            timer.stop('pre')
 
+            #print(aligned_locations)
             region = trans_CigarTuples_To_Region(s, read.cigartuples)
+            timer.start('search')
             for s, e in region:
                 while c < len_locus and  locus_list[c] <= e:
                     connected.add(c)
                     c += 1
-
+            if flag:
+                print(connected) 
+            timer.stop('search')
+            timer.start('putin')
             if key in read_map:
                 uset = connected.union(read_map[key])
+                '''
+                if len(uset) > 1:
+                    print(key, uset, connected, read_map[key])
+                '''
                 make_pair_connected(uset, locus_listed_dict)
                 del read_map[key]
             else:
                 read_map[key] = connected
+            timer.stop('putin')
+        else: 
+            pass
+            #print(read.query_name, read.cigartuples)
+            #print(read.get_aligned_pairs())
+    '''
+    for k, v in read_map.items():
+        print(k, v)
+    '''
 
     logger.info("end hash implement")
 
     samfile.close()
 
-    '''
-    single_count = 0
-    for k, v in read_map.items():
-        single_count += 1
-    '''
-
     connected_component = []
-    
+   
+    timer.start('walk') 
     walked = set()
     for i in range(len(locus_list) - 1):
         cc = []
         build_cc(locus_listed_dict, i, cc, walked)
         if len(cc) > 1:
-            connected_component.append(cc)
-            '''
-            print ("=== " ,len(cc) , " ===")
-            for c in cc:
-                print(c, locus_Mm_list[c])
-            '''
+            connected_component.append(sorted(cc))
+    timer.stop('walk')
 
-    #print (count, proper_count, single_count, singletons_count)
-
-    #print('in blocks')
-    
     return connected_component, locus_Mm_list, locus_idx_list
  

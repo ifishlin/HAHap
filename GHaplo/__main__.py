@@ -5,8 +5,9 @@ import logging
 from .args import HelpfulArgumentParser
 
 COMMANDS = [
-    'blocks',
     'phase',
+    'cc',
+    'vcf2ans',
 ]
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,6 @@ def main(argv=sys.argv[1:]):
         del args.module
         del args.debug
         module.main(args)
-        print(command_name)
 
 
 if __name__ == '__main__':
