@@ -101,6 +101,11 @@ def calc_score_matrix(phase_pairs_called_list, phase_variants_called_list, encod
 
         q2 = pairs_values_sorted[len(pairs_values_sorted)//4]
         pairs_count = sum(pairs_values_sorted)
+
+        #print(pairs_values_sorted)
+        #print(q2)
+        #print(pairs_count)
+
     except:
         print(phase_pairs_called_list)
         print(phase_variants_called_list)
@@ -111,6 +116,8 @@ def calc_score_matrix(phase_pairs_called_list, phase_variants_called_list, encod
     ## calculate average ave_coverage
     pairs_count = sum(pairs_values_sorted)
     ave_coverage = floor(pairs_count / len(phase_pairs_called_list))
+
+    #print(ave_coverage)
 
     for pairs_key, pairs_dict in phase_pairs_called_list.items():
         base  = pairs_key // variants_number
@@ -131,6 +138,8 @@ def calc_score_matrix(phase_pairs_called_list, phase_variants_called_list, encod
                    singleton_observed = False
                    n, n1, n2, n3 = _calc_n1_n2(pairs_number, p[1], q[1])
                    score = normalized_score_scale_to_max(n, n1, n2, p[1]+q[1], ave_coverage, alpha)
+                   if pairs_number < 5:
+                       score = score - 1e12
                    if score > max_score:
                        max_score = score
 
@@ -141,6 +150,7 @@ def calc_score_matrix(phase_pairs_called_list, phase_variants_called_list, encod
                   max_score = score
 
         score_matrix[base, shift] = max_score
+        score_matrix[shift, base] = max_score
  
     return score_matrix
 

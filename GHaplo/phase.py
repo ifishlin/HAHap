@@ -11,7 +11,7 @@ from GHaplo.blocks import main as blocks_main
 from GHaplo.vcf import output_CCs2VCF, output_CC2VCF, output_phasing2VCF, split_vcf_by_chrom, output_cc2csv
 from GHaplo.variants import InputVcfReader
 from GHaplo.entropy import create_sv_freq_dict, create_pv_freq_dict, calc_score_matrix
-from GHaplo.assembly import HiMergeNode, hc_merge, rebuild_haplo, save_phasing
+from GHaplo.assembly import HiMergeNode, hc_merge, rebuild_haplo, save_phasing, hc_merge_old
 from .timers import StageTimer
 from .matrix import print_var_matrix
 
@@ -26,6 +26,7 @@ def add_arguments(parser):
     arg('output_file', metavar='OUT', help='Predicted file')
     arg('cc_file', metavar='CC', help='CC file')
     arg('--mms', dest='mms', default=0, type=int, help='mininal mapping score')
+    arg('hc_merge', metavar='HM', help='hc_merge')
 
 def main(args):
     if os.path.isfile(args.output_file):
@@ -39,6 +40,8 @@ def main(args):
     variant_chrom_dict = split_vcf_by_chrom(args.variant_file)
     variant_chrom_dict = collections.OrderedDict(sorted(variant_chrom_dict.items()))    
 
+    print(args.hc_merge)
+
     for key, (v1, v2, v3) in variant_chrom_dict.items():
         logging.info(key)
         print(key, len(v1), len(v2), len(v3))
@@ -48,7 +51,7 @@ def main(args):
         #output_cc2csv(args.cc_file, key, connected_components, genomic_location_list)
         #print(connected_components)
         print('connected_components,:', len(connected_components))
-        pipeline(args, str(key), connected_components, ref_alt_list, genomic_location_list, timer)
+        pipeline(args, str(key), connected_components, ref_alt_list, genomic_location_list, timer, args.hc_merge)
         output_cc2csv(args.cc_file, key, connected_components, genomic_location_list)
 
     print("timer.pre",timer.elapsed('pre'), round(timer.elapsed('pre')/timer.total(),3))
@@ -73,20 +76,21 @@ def main(args):
     print("timer.create_pool",timer.elapsed('create_pool'),round(timer.elapsed('create_pool')/timer.total(),3))
     #print("timer.hc_merge",timer.elapsed('hc_merge'),round(timer.elapsed('hc_merge')/timer.total(),3)
 
-    print("timer.copy_matrix_1",timer.elapsed('copy_matrix_1'),round(timer.elapsed('copy_matrix_1')/timer.total(),3))
-    print("timer.get_maxscore",timer.elapsed('get_maxscore'),round(timer.elapsed('get_maxscore')/timer.total(),3))
-    print("timer.get_maxscore_between_segments",timer.elapsed('get_maxscore_between_segments'),round(timer.elapsed('get_maxscore_between_segments')/timer.total(),3))
-    print("timer.choice_haplos",timer.elapsed('choice_haplos'),round(timer.elapsed('choice_haplos')/timer.total(),3))
-    print("timer.rearrange",timer.elapsed('rearrange'),round(timer.elapsed('rearrange')/timer.total(),3))
-    print("timer.reduce_matrix",timer.elapsed('reduce_matrix'),round(timer.elapsed('reduce_matrix')/timer.total(),3))
-
-
+    print("timer.hc_merge",timer.elapsed('hc_merge'),round(timer.elapsed('hc_merge')/timer.total(),3))
+    print("timer.m1",timer.elapsed('m1'),round(timer.elapsed('m1')/timer.total(),3))
+    print("timer.m2",timer.elapsed('m2'),round(timer.elapsed('m2')/timer.total(),3))
+    print("timer.m3",timer.elapsed('m3'),round(timer.elapsed('m3')/timer.total(),3))
+    print("timer.m4",timer.elapsed('m4'),round(timer.elapsed('m4')/timer.total(),3))
+    print("timer.m5",timer.elapsed('m5'),round(timer.elapsed('m5')/timer.total(),3))
+    print("timer.merge_single_link_vector",timer.elapsed('merge_single_link_vector'),round(timer.elapsed('merge_single_link_vector')/timer.total(),3))
+    print("timer.argmax_single_link_vector",timer.elapsed('argmax_single_link_vector'),round(timer.elapsed('argmax_single_link_vector')/timer.total(),3))
 
     print("timer.check_null1",timer.elapsed('check_null'),round(timer.elapsed('check_null')/timer.total(),3))
     print("timer.check_null2",timer.elapsed('check_null2'),round(timer.elapsed('check_null2')/timer.total(),3))
     print("timer.output",timer.elapsed('output'),round(timer.elapsed('output')/timer.total(),3))
 
-def pipeline(args, chrom, connected_components, ref_alt_list, genomic_location_list, timer):
+
+def pipeline(args, chrom, connected_components, ref_alt_list, genomic_location_list, timer, hc_type):
 
     ## search variants blocks
     ## return, (1). connected_conmponents, 
@@ -161,8 +165,12 @@ def pipeline(args, chrom, connected_components, ref_alt_list, genomic_location_l
         timer.stop('create_pool')
 
         #timer.start('hc_merge')
-        r, s, t, u = hc_merge(vars_candidates_mapping, vars_candidates_pool, b, c, a, m, l, n, 'False', 0.9, timer)
+        if hc_type == 'new':
+            r, s, t, u = hc_merge(vars_candidates_mapping, vars_candidates_pool, b, c, a, m, l, n, 'False', 0.9, timer)
+        else:
+            r, s, t, u = hc_merge_old(vars_candidates_mapping, vars_candidates_pool, b, c, a, m, l, n, 'False', 0.9, timer)
         #timer.stop('hc_merge')
+
 
         if len(vars_candidates_pool) > 1:
             timer.start('check_null')

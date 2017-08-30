@@ -59,7 +59,7 @@ def get_maxscore(mat):
     shift = idx % mlen
     return base, shift, mat[base][shift]
 
-def reduce_matrix( mat, row, col):
+def reduce_matrix(mat, row, col):
     """
     Update and reduce matrix, update values in row 'row'
     delete column 'row' and 'col'
@@ -138,6 +138,7 @@ def get_matrix_idx(key, var_num):
 
 
 def get_phased_haplo(cluster1, cluster2, idx_in_c1, idx_in_c2):
+    #print("get_phased_haplo = ", cluster1.name, cluster2.name, idx_in_c1, idx_in_c2)
     """
     Get determined haplotypes on idx_in_c1 of node1 and idx_in_c2 of node2 
     """
@@ -145,12 +146,12 @@ def get_phased_haplo(cluster1, cluster2, idx_in_c1, idx_in_c2):
     cluster1_name = cluster1.name.split('_')
     cluster2_name = cluster2.name.split('_')
 
-    # what condition not in name??
-    # node1_idx = cluster1_name.index(str(idx_in_c1)) if str(idx_in_c1) in cluster1_name else None
-    # node2_idx = cluster2_name.index(str(idx_in_c2)) if str(idx_in_c2) in cluster2_name else None
-
     node1_idx = cluster1_name.index(str(idx_in_c1))
     node2_idx = cluster2_name.index(str(idx_in_c2))
+
+    #print("node1_idx node2_idx = ", node1_idx, node2_idx)
+    #print(cluster1.h1, cluster1.h2)
+    #print(cluster2.h1, cluster2.h2)
 
     if cluster1.h1 != None:
         c1_anchor = [cluster1.h1[node1_idx], cluster1.h2[node1_idx]]
@@ -560,9 +561,78 @@ def build_two_possible_sol(cluster1, cluster2):
 
 
 
+def argmax_single_link_vector(vector, timer):
+    timer.start('argmax_single_link_vector')
+    max_i = -1
+    max_j = -1
+    max_v = -np.inf
+    for idx, i in enumerate(vector):
+        if i[3] > max_v:
+            max_i = idx
+            max_j = i[2]
+            max_v = i[3]
+    timer.stop('argmax_single_link_vector')
+    return max_i, max_j
 
 
-def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_variants_location_list, phase_variants_called_list, encoding_tb, heter, hratio, timer):
+def merge_single_link_vector(matrix, vector, i, j, timer):
+    timer.start('merge_single_link_vector')
+    max_idx   = 0
+    max_value = -np.inf
+    #timer.start('m1')
+    arow = matrix[i]
+    brow = matrix[j]
+    for idx in range(len(matrix)):
+        a = arow[idx]
+        b = brow[idx]
+
+        t = a if a > b else b
+        #matrix[i][idx] = t
+        matrix[idx][i] = t
+        arow[idx] = t
+
+        #matrix[i][idx] = matrix[i][idx] if matrix[i][idx] > matrix[j][idx] else matrix[j][idx]
+        #matrix[idx][i] = matrix[i][idx]
+    #timer.stop('m1')
+
+    timer.stop('merge_single_link_vector')
+    timer.start('m3')
+    
+    matrix[:,j]   = -np.inf
+    matrix[j]     = -np.inf
+    matrix[i][i]  = -np.inf 
+    timer.stop('m3')
+
+    #timer.start('m3')
+    vector[j][2:] = [-1, -np.inf]
+
+    timer.start('m4')
+    arow = matrix[i]
+    for idx in range(len(matrix)):
+        if arow[idx] > max_value:
+            max_idx = idx 
+            #max_value = matrix[i][idx]
+            max_value = arow[idx]
+
+    timer.stop('m4')
+    #print(vector[i][0], vector[j][0]) 
+    vector[i][0]  = vector[i][0] + "_" + vector[j][0]
+    #print("i, j, vector = ", i, j, vector[i][0])
+    #vector[i][0]  = "_".join(map(str, sorted(map(int, vector[i][0].split("_"))))) 
+    vector[i][2:] = [max_idx, float(max_value)]
+    vector[i][1] += 1
+    #timer.stop('m3')
+
+     
+    timer.start('m5')
+    for idx in range(len(vector)):
+        if vector[idx][2] == j:
+            vector[idx][2] = i
+    timer.stop('m5')
+    #timer.stop('merge_single_link_vector')
+
+
+def hc_merge_old(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_variants_location_list, phase_variants_called_list, encoding_tb, heter, hratio, timer):
     """
     Args:
     Return:
@@ -573,10 +643,8 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
     # score_matrix_lookup     : copy of original matrix. change value to np.NINF,
     #                     when the pair merge fail in process 
     ##
-    timer.start('copy_matrix_1')
     score_matrix_reduced = copy_score_matrix(score_matrix)
     score_matrix_lookup  = copy_score_matrix(score_matrix)
-    timer.stop('copy_matrix_1')
     variant_num = len(score_matrix)
 
     stop_flag = False
@@ -587,8 +655,9 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
     connected_list = []
     observed_list = []
 
+
+    timer.start('hc_merge')
     while not stop_flag:
-        timer.start('get_maxscore')
         base, shift, score = get_maxscore(score_matrix_reduced)
         if(score == np.NINF):
             break
@@ -599,7 +668,6 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
         group2_id = vars_cddt_mp[shift]
         group1_num = len(group1_id.split("_"))
         group2_num = len(group2_id.split("_"))
-        timer.stop('get_maxscore')
 
         ##
         # Try each combination from high score to low score.
@@ -607,9 +675,7 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
         # else find next until no possible pair.
         ##
         for rank in range(0, group1_num * group2_num):
-            timer.start('get_maxscore_between_segments') 
             idx_in_c1, idx_in_c2, score = get_maxscore_between_segments(group1_id, group2_id, score_matrix_lookup, rank)
-            timer.stop('get_maxscore_between_segments')
 
             if idx_in_c1 < idx_in_c2:
                 cluster1 = vars_cddt_pl[group1_id]
@@ -626,7 +692,6 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
             if(score == np.NINF):
                 break
 
-            timer.start('choice_haplos')
             if pv_key in pv_dict:
                 observed_pairs_dict = pv_dict[pv_key]
            
@@ -645,7 +710,6 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
                 logging.error("can't find in pv_dict")
                 sys.exit()
 
-            timer.stop('choice_haplos')
         ##
         # If two segment can't merge together in previous step,
         # remove it from lookup matrix, then this pair wouldn't be considered again.
@@ -657,14 +721,6 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
             score_matrix_lookup[idx_in_c2][idx_in_c1] = np.NINF
             score_matrix_reduced[base][shift] = np.NINF
             continue
-
-        '''
-        ## seems useless?
-        if cluster1.h1 == None:
-            cluster1.h1, cluster1.h2 = (node.h1[0], node.h2[0])
-        if cluster2.h1 == None:
-            cluster2.h1, cluster2.h2 = (node.h1[1], node.h2[1])
-        '''
 
         ##
         #  re-arrange?
@@ -693,15 +749,6 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
         del vars_cddt_pl[cluster1.name]
         del vars_cddt_pl[cluster2.name]
 
-        '''
-        print("start checking")
-        loss = checking_multi_answer(vars_cddt_pl, self.ans_dict, self.code_tb)
-        print("loss_total ", loss, score, observed_pairs_dict)
-        loss_list.append(loss)
-        threshold_list.append(score)
-        connected_list.append(str(idx_in_c1)+"_"+str(idx_in_c2))
-        observed_list.append(pv_dict[pv_key])
-        '''
 
         ##
         # update mapping (var_lst)
@@ -713,13 +760,139 @@ def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_v
         vars_cddt_mp[base] = tmp_name
         del vars_cddt_mp[shift]
 
-        timer.stop('rearrange')
         ##
         # Reduce process, keep base, remove shift
         ##
-        timer.start('reduce_matrix')
+        #timer.start('reduce_matrix')
         score_matrix_reduced = reduce_matrix(score_matrix_reduced, base, shift)
-        timer.stop('reduce_matrix')
+        #timer.stop('reduce_matrix')
+
+    timer.stop('hc_merge')
+    return loss_list, threshold_list, connected_list, observed_list
+
+
+
+def hc_merge(vars_cddt_mp, vars_cddt_pl, pv_dict, score_matrix, sv_dict, phase_variants_location_list, phase_variants_called_list, encoding_tb, heter, hratio, timer):
+    """
+    Args:
+    Return:
+    """
+    ##
+    # score_matrix_reduced : score matrix of segment relationship, 
+    #                     it reduced along mergence process.
+    # score_matrix_lookup     : copy of original matrix. change value to np.NINF,
+    #                     when the pair merge fail in process 
+    ##
+
+    #score_matrix = np.array([[-np.inf, -5.5, -7.3, -8.9, -5.8],[-5.5, -np.inf, -6.1, -2.14, -5.6], [-7.3, -6.1, -np.inf , -7.8, -5.6], [-8.9, -2.14,-7.8, -np.inf, -5.5], [-5.8, -5.6,-5.6,-5.5,-np.inf]])
+
+    v_num = len(score_matrix) 
+    tmp_m = copy_score_matrix(score_matrix)
+    tmp_l = copy_score_matrix(score_matrix)
+
+
+    single_link_vector = []
+    timer.start('m1')
+    for i in range(len(tmp_m)):
+        vector = tmp_m[i]
+        idx = np.argmax(vector)
+        single_link_vector.append([str(i), 1, idx, float(vector[idx])])
+    timer.stop('m1')
+
+    t, u = argmax_single_link_vector(single_link_vector, timer)
+    while t != -1 and u != -1:    
+
+        v1n, v1c = single_link_vector[t][:2]
+        v2n, v2c = single_link_vector[u][:2]
+
+        timer.start('m2') 
+        for rank in range(0, v1c * v2c):
+            x, y, s = get_maxscore_between_segments(v1n, v2n, tmp_l, rank)
+
+            #print("v1n, v2n, x, y, s = ", v1n, v2n, x, y, s)
+            #print(vars_cddt_pl.keys())    
+            if x > y:
+                c1 = vars_cddt_pl[v2n]
+                c2 = vars_cddt_pl[v1n]
+                c1_idx, c2_idx = y, x
+            else:
+                c1 = vars_cddt_pl[v1n]
+                c2 = vars_cddt_pl[v2n]
+                c1_idx, c2_idx = x, y
+
+            pv_key = get_matrix_encode_key(c1_idx, c2_idx, v_num)
+
+
+            if(s == np.NINF):
+                break
+
+            if pv_key in pv_dict:
+                observed_pairs_dict = pv_dict[pv_key]
+
+                node = hc_create_parent_node(c1, c2)
+                #print("hc_create_parent = ", node.name)
+                node.h1, node.h2 = choice_haplos(observed_pairs_dict, c1, c2, c1_idx, c2_idx, sv_dict, phase_variants_location_list, phase_variants_called_list, encoding_tb, heter, hratio, pv_dict, v_num)
+
+
+                #careful for end condition? only one None?
+                if(node.h1 != None and node.h2 != None):
+                    break
+ 
+ 
+            else:
+                logging.error("can't find in pv_dict")
+                sys.exit()
+
+        timer.stop('m2')
+
+        ''' 
+        #print("before node.h1, node.h2 = ", node.name, node.h1, node.h2)
+        #print("before ", vars_cddt_pl)
+        timer.start('m3')
+        tn = node.name.split("_")
+        tmp = sorted(map(int, node.name.split("_")))
+        tmp_name = "_".join(map(str, tmp))
+        h1 = list()
+        h2 = list()
+        for i in tmp:
+            h1.append(node.h1[tn.index(str(i))])
+            h2.append(node.h2[tn.index(str(i))])
+        timer.stop('m3')
+
+        timer.start('m4')
+        # ? node.name should always be in pl?
+        #delete old name of the node
+        if node.name in vars_cddt_pl: 
+            del vars_cddt_pl[node.name]
+        node.h1 = h1
+        node.h2 = h2
+        node.name = tmp_name
+        timer.stop('m4')
+        '''
+        #timer.start('m5')
+        ##
+        # Put new node into pool, and remove old two from it.
+        ##
+        vars_cddt_pl[node.name] = node
+        del vars_cddt_pl[c1.name]
+        del vars_cddt_pl[c2.name]
+        #timer.stop('m5')
+     
+        #print("after  node.h1, node.h2 = ", node.name, node.h1, node.h2)
+        #print("after  ", vars_cddt_pl)
+
+        if x < y:
+            merge_single_link_vector(tmp_m, single_link_vector, t, u, timer)
+        else:
+            merge_single_link_vector(tmp_m, single_link_vector, u, t, timer)
+
+        t, u = argmax_single_link_vector(single_link_vector, timer)
+
+    ## evaluation
+    loss_list = []
+    threshold_list = []
+    connected_list = []
+    observed_list = []
 
     return loss_list, threshold_list, connected_list, observed_list
 
