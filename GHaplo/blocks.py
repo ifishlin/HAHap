@@ -121,13 +121,17 @@ def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list, timer):
             #if read.cigartuples == None:
             #    continue
 
-            target = '==='
+
+
+            target = 'test1_2_105435_106338_0:0:0_0:0:0_13f7_16176089'
 
             flag = False
             if key == target:
                 flag = True
-                print(read.query_name)
-                print(read.is_read1)
+                print(read.query_name, read.mapping_quality)
+
+            if read.mapping_quality < args.mms:
+                continue
 
             if s > pre_locus:
                 c = b_search_while(locus_list, s)
@@ -152,7 +156,7 @@ def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list, timer):
                 uset = connected.union(read_map[key])
                 '''
                 if len(uset) > 1:
-                    print(key, uset, connected, read_map[key])
+                    print("pair-end", key, uset, connected, read_map[key])
                 '''
                 make_pair_connected(uset, locus_listed_dict)
                 del read_map[key]
@@ -163,17 +167,17 @@ def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list, timer):
             pass
             #print(read.query_name, read.cigartuples)
             #print(read.get_aligned_pairs())
-    '''
+ 
+    # print("single")
     for k, v in read_map.items():
-        print(k, v)
-    '''
+        make_pair_connected(v, locus_listed_dict)
 
     logger.info("end hash implement")
 
     samfile.close()
 
     connected_component = []
-   
+  
     timer.start('walk') 
     walked = set()
     for i in range(len(locus_list) - 1):
