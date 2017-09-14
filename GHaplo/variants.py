@@ -1,20 +1,20 @@
 __author__ = 'ifish'
 
 import logging
-import sys
 from collections import OrderedDict
 
 import pysam
 import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
 
+
 class InputVcfReader(object):
     """
     """
-    encoding_table = {'A':1, 'T':2, 'C':3, 'G':4, 1:'A', 2:'T', 3:'C', 4:'G', 0:' ', ' ':0, 6:'-', '-':6}
+    encoding_table = {'A': 1, 'T': 2, 'C': 3, 'G': 4, 1: 'A', 2: 'T', 3: 'C', 4: 'G', 0: ' ', ' ': 0, 6: '-', '-': 6}
 
-
-    def __init__(self, haplo_file, bam_file, min_base_quality, min_read_quality, cc_input=None, indels=False, trust=True):
+    def __init__(self, haplo_file, bam_file, min_base_quality, min_read_quality,
+                 cc_input=None, indels=False, trust=True):
         self.haplo_file = haplo_file
         self.bam_file = bam_file
         self.indels = indels
@@ -23,13 +23,12 @@ class InputVcfReader(object):
         self.trust = trust
         self.cc_input = cc_input
         self.reads_proxy = None
-        #self.reads_proxy = pysam.AlignmentFile(self.bam_file, "rb")    
-        self.encoding_table = {'A':1, 'T':2, 'C':3, 'G':4, 1:'A', 2:'T', 3:'C', 4:'G', 0:' ', ' ':0, 6:'-', '-':6}
-
-        #self.reads_proxy = None
+        self.encoding_table = {'A': 1, 'T': 2, 'C': 3, 'G': 4, 1: 'A', 2: 'T', 3: 'C', 4: 'G', 0: ' ', ' ': 0,
+                               6: '-', '-': 6}
         self.logging = logging
 
-    def reset(self, haplo_file, bam_file, min_base_quality, min_read_quality, cc_input=None, indels=False, trust=True):
+    def reset(self, haplo_file, bam_file, min_base_quality, min_read_quality, cc_input=None, indels=False,
+              trust=True):
         self.haplo_file = haplo_file
         self.bam_file = bam_file
         self.indels = indels
@@ -37,13 +36,9 @@ class InputVcfReader(object):
         self.min_read_quality = min_read_quality
         self.trust = trust
         self.cc_input = cc_input
-        #self.reads_proxy = pysam.AlignmentFile(self.bam_file, "rb")    
-        self.encoding_table = {'A':1, 'T':2, 'C':3, 'G':4, 1:'A', 2:'T', 3:'C', 4:'G', 0:' ', ' ':0, 6:'-', '-':6}
-
-        #self.reads_proxy = None
+        self.encoding_table = {'A': 1, 'T': 2, 'C': 3, 'G': 4, 1: 'A', 2: 'T', 3: 'C', 4: 'G', 0: ' ', ' ': 0,
+                               6: '-', '-': 6}
         self.logging = logging
-
-
 
     def get_readmtx(self, timer):
         """
@@ -72,69 +67,51 @@ class InputVcfReader(object):
             phase_variants_called_list = [(ref_major, called_h1, called_h2), (ref_major, called_h1, called_h2), ... ]
         """
 
-        #logging.info("start _load_haplo")
+        # logging.info("start _load_haplo")
         phase_input = self.cc_input
 
         timer.start('readmtx_init')
         phase_variants_location_list = [x[1] for x in phase_input]
-        phase_variants_called_list = [(x[4],x[5],x[6]) for x in phase_input]
+        phase_variants_called_list = [(x[4], x[5], x[6]) for x in phase_input]
         phase_fragments_dict = OrderedDict()
         timer.stop('readmtx_init')
-        #logging.info("start _read_variance")
 
         # Open Pysam 
-        if self.reads_proxy == None:
+        if self.reads_proxy is None:
             self.reads_proxy = pysam.AlignmentFile(self.bam_file, "rb")
-
-        #timer.start('read_variance')
-        # Read from Pysam
-        #for vd in phase_input:
-        #    self._read_variance(vd[0], vd[1], vd[2], vd[3], phase_fragments_dict, (vd[5], vd[6]), self.trust, timer)
  
         self._read_variance_faster(phase_input, phase_fragments_dict, self.trust, timer)
-        #print('read_variance_faster')
-        #print(len(phase_fragments_dict))
-
-        #timer.stop('read_variance')
-
-        # Close Pysam
-        #self.reads_proxy.close()
 
         timer.start('clear_matrix')
-        self._clear_matrix(phase_fragments_dict)
+        InputVcfReader.clear_matrix(phase_fragments_dict)
         timer.stop('clear_matrix')
 
-
-        #logging.info("start _read_matrix")
-        #read_matrix = np.zeros(shape=(len(phase_fragments_dict), len(phase_variants_location_list)), dtype='int')
         read_matrix = lil_matrix((len(phase_fragments_dict), len(phase_variants_location_list)), dtype=np.int8)
 
-        #logging.info("start _produce_var_matrix")
         timer.start('produce_var_matrix')
-        phase_fragments_range_list = self._produce_var_matrix(read_matrix, phase_fragments_dict, phase_variants_location_list, InputVcfReader.encoding_table)
+        phase_fragments_range_list = self._produce_var_matrix(read_matrix, phase_fragments_dict,
+                                                              phase_variants_location_list,
+                                                              InputVcfReader.encoding_table)
         timer.stop('produce_var_matrix')
 
-        #del phase_input 
-        return read_matrix, phase_fragments_dict, phase_fragments_range_list, phase_variants_location_list, InputVcfReader.encoding_table, phase_variants_called_list
+        return read_matrix, phase_fragments_dict, phase_fragments_range_list, phase_variants_location_list,\
+            InputVcfReader.encoding_table, phase_variants_called_list
 
-
-    def _clear_matrix(self, phase_fragments_dict):
+    @staticmethod
+    def clear_matrix(phase_fragments_dict):
         """
         Remove unqualified read from v_desc_dict. (1). remove reads that cover less than two variants.
-
-
         """
         noninfo = []
-        for x,y in phase_fragments_dict.items():
+        for x, y in phase_fragments_dict.items():
             a = [z[2] for z in y]
             if '-' in a:
                 a.remove('-')
-            if(len(a) < 2):
+            if len(a) < 2:
                 noninfo.append(x)
-        
+
         for x in noninfo:
             del phase_fragments_dict[x]
-
 
     def _read_variance_faster(self, variances, phase_fragments_dict, trust, timer):
         """
@@ -147,22 +124,22 @@ class InputVcfReader(object):
         chrom = variances[0][0]
         # 0-base, end value not included
         variance_first_location = variances_location[0] - 1
-        variance_last_location  = variances_location[-1]
+        variance_last_location = variances_location[-1]
 
         visited_set = set()
         removed_set = set()
 
         timer.start('fetch')
-        #print('fetch from ', chrom, variance_first_location, variance_last_location)
+        # print('fetch from ', chrom, variance_first_location, variance_last_location)
         for read in self.reads_proxy.fetch(chrom, variance_first_location, variance_last_location):
             timer.stop('fetch')
-            if(read.mapping_quality < self.min_read_quality):
+            if read.mapping_quality < self.min_read_quality:
                 continue
 
             if not read.is_proper_pair:
                 continue
 
-            if read.is_read1 == True:
+            if read.is_read1:
                 read_id = read.query_name + "_" + str(read.next_reference_start)
             else:
                 read_id = read.query_name + "_" + str(read.reference_start)
@@ -172,19 +149,16 @@ class InputVcfReader(object):
                 print(read.is_read1)
                 flag = True
 
-
             allele = ''
-
             aligned_pairs = read.get_aligned_pairs()
             timer.start('aligned_pairs')
             aligned = [i[1] for i in aligned_pairs]
             timer.stop('aligned_pairs')
 
-
             for var_idx, v in enumerate(variances_location):
                 v_0_base = v-1
                 # switch to binary search
-                if v_0_base > read.reference_end - 1: #one past last alignment
+                if v_0_base > read.reference_end - 1:  # one past last alignment
                     break
                 if v_0_base < read.reference_start:
                     continue
@@ -192,7 +166,7 @@ class InputVcfReader(object):
                 if v_0_base in range(read.reference_start, read.reference_end):
                     aligned_idx = aligned.index(v_0_base)
                     if aligned_pairs[aligned_idx][0] == None:
-                        ## gap in read
+                        # gap in read
                         observed = '-'
                     else:
                         observed = read.seq[aligned_pairs[aligned_idx][0]]
@@ -200,7 +174,7 @@ class InputVcfReader(object):
                     if flag:
                         print("observed", observed)
 
-                    if(observed not in location_ref[var_idx] and trust == True):
+                    if observed not in location_ref[var_idx] and trust:
                         allele = '-'
                     else:
                         allele = observed
@@ -210,17 +184,17 @@ class InputVcfReader(object):
 
                     timer.start('phase_fragments_dict')
                     if read_id in visited_set:
-                       is_pair_read = True
+                        is_pair_read = True
                     else:
-                       is_pair_read = False
-                       visited_set.add(read_id)
+                        is_pair_read = False
+                        visited_set.add(read_id)
 
-                    if(read_id in phase_fragments_dict):
+                    if read_id in phase_fragments_dict:
                         if not is_pair_read:
                             phase_fragments_dict[read_id].append((chrom, v, allele, ''))
                         else:
                             fragment = phase_fragments_dict[read_id]
-                            exist     = [i[1] for i in fragment]
+                            exist = [i[1] for i in fragment]
                             observeds = [i[2] for i in fragment]
                             if v in exist and allele != observeds[exist.index(v)]:
                                 removed_set.add(read_id)
@@ -266,30 +240,24 @@ class InputVcfReader(object):
             del phase_fragments_dict[i]
         timer.stop('removed_set')
 
-        
-
         return
 
-
-    ####
     def _read_variance(self, chrom, loci, extend_len, var_type, phase_fragments_dict, ref, trust, timer):
         """
         Read raw NGS data of each variants from sam file.
 
         """
 
-        print('aaaa')
-
         removed_set = set()
         # (loci - 1) in array = loci in seqs
         timer.start('fetch')
         for read in self.reads_proxy.fetch(chrom, loci - 1, loci):
             timer.stop('fetch')
-            #read quality filter
+            # read quality filter
 
             print(read.query_name)
 
-            if(read.mapping_quality < self.min_read_quality):
+            if read.mapping_quality < self.min_read_quality:
                 continue
 
             '''
@@ -311,11 +279,10 @@ class InputVcfReader(object):
             if not read.is_proper_pair:
                 continue
 
-            if read.is_read1 == True:
+            if read.is_read1:
                 read_id = read.query_name + "_" + str(read.next_reference_start)
             else:
                 read_id = read.query_name + "_" + str(read.reference_start)
-
 
             print(read_id)
 
@@ -330,9 +297,9 @@ class InputVcfReader(object):
                 idx = aligned.index(loci - 1)
                 observed = read.seq[aligned_pairs[idx][0]]
 
-                if(aligned_pairs[idx][0] == None):
+                if aligned_pairs[idx][0] is None:
                     allele = '-'
-                elif(observed not in ref and trust == True):
+                elif observed not in ref and trust:
                     allele = '-'
                 else:
                     allele = observed
@@ -344,13 +311,13 @@ class InputVcfReader(object):
             timer.stop('aligned_pairs')
 
             timer.start('phase_fragments_dict')
-            if(read_id in phase_fragments_dict):
-                #overlapping paired-end, but different in target allele
+            if read_id in phase_fragments_dict:
+                # overlapping paired-end, but different in target allele
                 overlapped = False
                 for i in phase_fragments_dict[read_id]:
                     if i[1] == loci:
                         overlapped = True
-                        if(i[2] != allele):
+                        if i[2] != allele:
                             removed_set.add(read_id)
                         break
 
@@ -361,7 +328,7 @@ class InputVcfReader(object):
             timer.stop('phase_fragments_dict')
             timer.start('fetch')
         timer.stop('fetch')
-        #remove unqualified reads
+        # remove unqualified reads
         timer.start('removed_set')
         for i in removed_set:
             del phase_fragments_dict[i]
@@ -369,16 +336,17 @@ class InputVcfReader(object):
  
         return
 
-    def _produce_var_matrix(self, read_matrix, phase_fragments_dict, phase_variants_location_list, encoding_table):
+    @staticmethod
+    def _produce_var_matrix(read_matrix, phase_fragments_dict, phase_variants_location_list, encoding_table):
         """
 
         """
-        #vertical
+        # vertical
         phase_fragments_range_list = []
         v_idx = 0
         code_num = len(encoding_table)/2
 
-        loc_idx_dict = {y:x for x,y in dict(enumerate(phase_variants_location_list, 0)).items()}
+        loc_idx_dict = {y: x for x, y in dict(enumerate(phase_variants_location_list, 0)).items()}
 
         for read_id, variances in phase_fragments_dict.items():
             min_loc = loc_idx_dict[variances[0][1]]
@@ -387,7 +355,7 @@ class InputVcfReader(object):
             phase_fragments_range_list.append((read_id, min_loc, max_loc))
             for chrom, loci, allele, atype in variances:
                 h_idx = loc_idx_dict[loci]
-                if(allele in encoding_table):
+                if allele in encoding_table:
                     code = encoding_table[allele]
                 else:
                     code = code_num
@@ -398,5 +366,3 @@ class InputVcfReader(object):
             v_idx += 1
 
         return phase_fragments_range_list
-
-

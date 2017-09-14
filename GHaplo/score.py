@@ -2,14 +2,14 @@
 
 import os
 import sys
-import copy
 from GHaplo.timers import StageTimer
 from six.moves import cPickle as pickle
 
 timer = StageTimer()
 
+
 def check(block, predicted):
-    #align first nucleotide
+    # align first nucleotide
 
     b1, b2, b3, b4 = block[0]
     p1, p2, p3, p4 = predicted[0]
@@ -21,7 +21,7 @@ def check(block, predicted):
     elif b3 == p4 and b4 == p3:
         first_alinged_switch = True
         timer.start("align")
-        #block = list(map(lambda b:(b[0],b[1],b[3],b[2]),block))
+        # block = list(map(lambda b:(b[0],b[1],b[3],b[2]),block))
         timer.stop("align")
     else:
         print("==ERROR==") 
@@ -45,14 +45,14 @@ def check(block, predicted):
             if first_alinged_switch:
                 b3, b4 = b4, b3
 
-            #is_find = True
+            # is_find = True
             if p2 != b2:
                 continue
             else:
-               b_next = bidx
-               is_find = True
-               if pidx != 0:
-                   case += 1
+                b_next = bidx
+                is_find = True
+                if pidx != 0:
+                    case += 1
 
             if b3 == p3 and b4 == p4:
                 if not last_is_identical:
@@ -83,27 +83,27 @@ def check(block, predicted):
             else:
                 print(p2, b3, b4, p3, p4, error, last_is_identical, last_time_error)
 
-        if is_find == False:
+        if not is_find:
             unphased += 1
             print("NOT IN SAME BLOCK ", predicted[0][0], predicted[0][1], p2, pidx)
             return (predicted[0][0], int(predicted[0][1]), error, case, unphased, total), pidx 
 
     timer.stop("loop")
 
-    #print(predicted[0][0], predicted[0][1], error)
+    # print(predicted[0][0], predicted[0][1], error)
 
     return (predicted[0][0], int(predicted[0][1]), error, case, unphased, total), pidx + 1
 
-predicted_fn  = sys.argv[1]
+predicted_fn = sys.argv[1]
 blocks_ans_fn = sys.argv[2]
 
-predicted_file  = open(predicted_fn, 'r')
+predicted_file = open(predicted_fn, 'r')
 blocks_ans_file = open(blocks_ans_fn, 'r')
 
 timer.start("block_ans")
 blocks_dict = dict()
 loc2blocks = dict()
-## read blocks ans
+# read blocks ans
 for line in blocks_ans_file:
     line = line.strip()
     chrom, location, ps_id, h1, h2 = line.split("\t")
@@ -118,7 +118,6 @@ for line in blocks_ans_file:
 blocks_ans_file.close()
 
 timer.stop("block_ans")
-
 
 timer.start("predict")
 predicted_dict = dict()
@@ -140,13 +139,13 @@ timer.stop("predict")
 def b_search_while(lst, target):
     left = 0
     right = len(lst)-1
-    while(left <= right):
+    while left <= right:
         avg = (left + right)//2
         mid = int(lst[avg][1])
 
-        if (mid < target):
+        if mid < target:
             left = avg + 1
-        elif (mid > target):
+        elif mid > target:
             right = avg - 1
         else:
             return avg
@@ -155,15 +154,15 @@ def b_search_while(lst, target):
 
 
 u_error = 0
-u_case  = 0 
+u_case = 0
 u_unphased = 0
 u_total = 0
 
 ps_data = []
 s_total = 0
-s_case  = 0
+s_case = 0
 s_unphased = 0
-s_error    = 0
+s_error = 0
 
 repeat_count = 0 
 
@@ -190,7 +189,7 @@ for k, vals in predicted_dict.items():
         v_idx += v_step        
 
         u_error += d[2]
-        u_case  += d[3]
+        u_case += d[3]
         u_unphased += d[4]
         u_total += d[5]
         repeat_count += 1
@@ -198,20 +197,20 @@ for k, vals in predicted_dict.items():
             print("DEAD")
             u_error = -1
             break
-            #sys.exit()
+            # sys.exit()
         print("==")
 
     if u_error != -1:
 
         s_error += u_error
-        s_case  += u_case
+        s_case += u_case
         s_unphased += u_unphased
         s_total += u_total
         ps_data.append((d[0], first_ps, u_error, u_case, u_unphased, u_total, repeat_count))
 
     repeat_count = 0
     u_error = 0
-    u_case  = 0
+    u_case = 0
     u_unphased = 0
     u_total = 0
 
@@ -219,19 +218,13 @@ out_pickle_file = sys.argv[3] + '.pickle'
 
 
 if os.path.isfile(out_pickle_file):
-   os.remove(out_pickle_file)
+    os.remove(out_pickle_file)
 
 print(len(ps_data))
 fh = open(out_pickle_file, 'wb')
 # pack = {'ps_data': ps_data, 'break_in_predict': break_in_predict}
 pack = {'ps_data': ps_data}
-pickle.dump(pack,fh)
+pickle.dump(pack, fh)
 fh.close()
 
 print(s_error, s_case, s_unphased, s_total)
-
-#print("timer.block_ans",timer.elapsed('block_ans'), round(timer.elapsed('block_ans')/timer.total(),3))
-#print("timer.predict",timer.elapsed('predict'), round(timer.elapsed('predict')/timer.total(),3))
-#print("timer.loop0",timer.elapsed('loop0'), round(timer.elapsed('loop0')/timer.total(),3))
-#print("timer.loop",timer.elapsed('loop'), round(timer.elapsed('loop')/timer.total(),3))
-#print("timer.align",timer.elapsed('align'), round(timer.elapsed('align')/timer.total(),3))

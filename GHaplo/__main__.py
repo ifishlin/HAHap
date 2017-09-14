@@ -1,7 +1,6 @@
 import sys
 import importlib
 import logging
-#from . import __version__
 from .args import HelpfulArgumentParser
 
 COMMANDS = [
@@ -11,6 +10,7 @@ COMMANDS = [
 ]
 
 logger = logging.getLogger(__name__)
+
 
 class NiceFormatter(logging.Formatter):
     """
@@ -42,18 +42,18 @@ def ensure_pysam_version():
     if LooseVersion(pysam_version) < LooseVersion("0.8.1"):
         sys.exit("WhatsHap requires pysam >= 0.8.1")
 
+
 def main(argv=sys.argv[1:]):
     ensure_pysam_version()
     parser = HelpfulArgumentParser(description=__doc__, prog='ghaplo')
     parser.add_argument('--version', action='version', version='%(prog)s ' + 'b0.1')
-    parser.add_argument('--debug', action='store_true', default=False,
-        help='Print debug messages')
+    parser.add_argument('--debug', action='store_true', default=False, help='Print debug messages')
 
     subparsers = parser.add_subparsers()
     for command_name in COMMANDS:
         module = importlib.import_module('.' + command_name, 'GHaplo')
         subparser = subparsers.add_parser(command_name,
-                help=module.__doc__.split('\n')[1], description=module.__doc__)
+                                          help=module.__doc__.split('\n')[1], description=module.__doc__)
 
         subparser.set_defaults(module=module, subparser=subparser)
         module.add_arguments(subparser)

@@ -5,36 +5,33 @@ Search SNPs blocks and then output to stdout or to main prog.
 import logging
 import sys
 import pysam
-#from concurrent.futures import ProcessPoolExecutor
-
-#def func(i):
-#    return i[1]
-
 
 BAM_CMATCH = 0
-BAM_CINS   = 1
-BAM_CDEL   = 2
-BAM_CREF_SKIP  = 3
+BAM_CINS = 1
+BAM_CDEL = 2
+BAM_CREF_SKIP = 3
 BAM_CSOFT_CLIP = 4
 BAM_CHARD_CLIP = 5
 
 logger = logging.getLogger()
 
+
 def b_search_while(lst, target):
     left = 0
     right = len(lst)-1
-    while(left <= right):
+    while left <= right:
         avg = (left + right)//2
         mid = lst[avg]
 
-        if (mid < target):
+        if mid < target:
             left = avg + 1
-        elif (mid > target):
+        elif mid > target:
             right = avg - 1
         else:
             return avg
 
     return left
+
 
 def make_pair_connected(cc, locus_listed_dict):
     l = list(cc)
@@ -44,10 +41,10 @@ def make_pair_connected(cc, locus_listed_dict):
             locus_listed_dict[j].add(i)
 
 
-def trans_CigarTuples_To_Region(idx, cigarstuples):
+def trans_cigartuples_to_region(idx, cigarstuples):
     region = []
     start = idx
-    end   = 0
+    end = 0
     for c, l in cigarstuples:
 
         if c == BAM_CMATCH:
@@ -57,13 +54,14 @@ def trans_CigarTuples_To_Region(idx, cigarstuples):
         elif c == BAM_CINS:
             pass
         elif c == BAM_CDEL:
-            start = start + l #next
+            start = start + l  # next
         elif c == BAM_CREF_SKIP:
             pass
         else:
             pass
 
     return region
+
 
 def build_cc(locus_listed_dict, i, cc, walked):
     if i not in walked:
@@ -72,6 +70,7 @@ def build_cc(locus_listed_dict, i, cc, walked):
         for j in locus_listed_dict[i]:
             build_cc(locus_listed_dict, j, cc, walked)
 
+
 def add_arguments(parser):
     arg = parser.add_argument
     arg('variant_file', metavar='VCF', help='VCF file with variants needed to be phased')
@@ -79,14 +78,12 @@ def add_arguments(parser):
 
 
 def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list, timer):
-
-    #ee = ProcessPoolExecutor()
  
     locus_list.append(sys.maxsize)
     len_locus = len(locus_list)
     locus_listed_dict = [set() for i in range(len_locus - 1)]
 
-    samfile = pysam.AlignmentFile(args.input_file, "rb" )
+    samfile = pysam.AlignmentFile(args.input_file, "rb")
 
     header = samfile.header
 
@@ -99,8 +96,7 @@ def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list, timer):
 
     read_map = dict()
 
-    #print('fetch from ',chrom, locus_list[0]-1, locus_list[-2])
-    #0-based, end value not included
+    # 0-based, end value not included
     iter1 = samfile.fetch(reference=chrom, start=locus_list[0]-1, end=locus_list[-2])
 
     logger.info("hash implement")
@@ -109,21 +105,15 @@ def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list, timer):
     c = 0
     for read in iter1:
         if read.is_proper_pair:
-        #if True:
             timer.start('pre')
             connected = set()
-            s = read.reference_start + 1 # transfer 1-base to 0-base
-            if read.is_read1 == True:
+            s = read.reference_start + 1  # transfer 1-base to 0-base
+            if read.is_read1 is True:
                 key = read.query_name + "_" + str(read.next_reference_start)
             else:
                 key = read.query_name + "_" + str(read.reference_start)
 
-            #if read.cigartuples == None:
-            #    continue
-
-
-
-            target = 'test1_2_105435_106338_0:0:0_0:0:0_13f7_16176089'
+            target = '----'
 
             flag = False
             if key == target:
@@ -141,11 +131,10 @@ def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list, timer):
                 c = pre_c
             timer.stop('pre')
 
-            #print(aligned_locations)
-            region = trans_CigarTuples_To_Region(s, read.cigartuples)
+            region = trans_cigartuples_to_region(s, read.cigartuples)
             timer.start('search')
             for s, e in region:
-                while c < len_locus and  locus_list[c] <= e:
+                while c < len_locus and locus_list[c] <= e:
                     connected.add(c)
                     c += 1
             if flag:
@@ -165,10 +154,7 @@ def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list, timer):
             timer.stop('putin')
         else: 
             pass
-            #print(read.query_name, read.cigartuples)
-            #print(read.get_aligned_pairs())
- 
-    # print("single")
+
     for k, v in read_map.items():
         make_pair_connected(v, locus_listed_dict)
 
@@ -188,4 +174,3 @@ def main(args, chrom, locus_list, locus_Mm_list, locus_idx_list, timer):
     timer.stop('walk')
 
     return connected_component, locus_Mm_list, locus_idx_list
- 
