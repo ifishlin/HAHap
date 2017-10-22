@@ -13,7 +13,7 @@ def print_var_matrix(var_matrix, v_matrix_ids, encoding_table, prange):
     for j in range(var_matrix.shape[1]):
         max_var = 0
         for i in range(var_matrix.shape[0]):
-            max_var = len(encoding_table[var_matrix[i, ]]) \
+            max_var = len(encoding_table[var_matrix[i, j]]) \
                 if len(encoding_table[var_matrix[i, j]]) > max_var else max_var
         max_list.append(max_var)
 

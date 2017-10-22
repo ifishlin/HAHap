@@ -65,14 +65,12 @@ def output_cc2csv(output_file, chrom, connected_components, cc_idx, block_min=2)
 
 
 def split_vcf_by_chrom(variant_file, indel=False):
-    current_chrom = None
-    pre_location = None
+    chrom = None
+    pre = None
+    var_chrom_dict = dict()
 
-    variant_chrom_dict = dict()
-
-    locus_list = []
-    locus_Mm_list = []
-    locus_idx_list = []
+    vars_allele = []
+    vars_str_loc = []
 
     variants_vcf = open(variant_file, 'r')
     for line in variants_vcf:
@@ -84,37 +82,32 @@ def split_vcf_by_chrom(variant_file, indel=False):
         if not indel and (len(m) > 1 or len(n) > 1):
             continue
 
-        if c != current_chrom:
-            if current_chrom is not None:
-                variant_chrom_dict[int(current_chrom)] = [locus_list, locus_Mm_list, locus_idx_list]
+        if c != chrom:
+            if chrom is not None:
+                var_chrom_dict[int(chrom)] = [vars_allele, vars_str_loc]
 
-            locus_list = []
-            locus_Mm_list = []
-            locus_idx_list = []
+            vars_allele = []
+            vars_str_loc = []
 
-            locus_list.append(int(i))
-            locus_Mm_list.append([m, n])
-            locus_idx_list.append(i)
+            vars_allele.append([m, n])
+            vars_str_loc.append(i)
 
-            pre_location = i
-            current_chrom = c
-            logger.info("chromosome " + current_chrom)
+            pre = i
+            chrom = c
+            logger.info("chromosome " + chrom)
         else:
-            if pre_location == i:
+            if pre == i:
                 logger.warning("duplicate location " + i)
-                while locus_list[-1] == int(pre_location):
+                while vars_str_loc[-1] == pre:
                     logger.warning("DELETE")
-                    del locus_list[-1]
-                    del locus_Mm_list[-1]
-                    del locus_idx_list[-1]
+                    del vars_allele[-1]
+                    del vars_str_loc[-1]
                 continue
 
-            pre_location = i
-            locus_list.append(int(i))
-            locus_Mm_list.append([m, n])
-            locus_idx_list.append(i)
+            pre = i
+            vars_allele.append([m, n])
+            vars_str_loc.append(i)
 
-    variant_chrom_dict[int(current_chrom)] = [locus_list, locus_Mm_list, locus_idx_list]
-    # print(locus_list)
+    var_chrom_dict[int(chrom)] = [vars_allele, vars_str_loc]
 
-    return variant_chrom_dict
+    return var_chrom_dict

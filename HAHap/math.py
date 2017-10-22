@@ -9,7 +9,7 @@ def combination(n, k):
     answer = numerator / denominator
     return answer
 
-
+'''
 def likelihood(n, n1, n2):
     mp1 = 0.49
     mp2 = 0.49
@@ -30,7 +30,7 @@ def prior(ref, h1, h2):
 
 def calc_posterior(n, n1, n2, ref, h1, h2):
     return likelihood(n, n1, n2) + prior(ref, h1, h2)
-
+'''
 
 def score(n, n1, n2):
     mp1 = 0.49
@@ -64,3 +64,4 @@ def normalized_score_scale_to_max(n, n1, n2, orignal_n, max_sample_size, alpha):
     """scale should put it here"""
     p = score(n, n1, n2) - normalized_factor(n)
     return log(sigmoid(orignal_n/max_sample_size, alpha) * pow(2, p), 2)
+    #return log(sigmoid(orignal_n/max_sample_size, alpha) * p, 2)

@@ -32,6 +32,9 @@ class StageTimer:
         """Return sum of all times"""
         return sum(self._elapsed.values())
 
+    def tags(self):
+        return self._elapsed.items()
+
     @contextmanager
     def __call__(self, stage):
         self.start(stage)

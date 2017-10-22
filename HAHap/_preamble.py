@@ -13,10 +13,16 @@
 
 import sys, os
 
+print(sys.path)
+
 path = os.path.abspath(sys.argv[0])
+print(sys.argv[0])
+print(path)
 while os.path.dirname(path) != path:
-    if os.path.exists(os.path.join(path, 'HAHap', '__init__.py')):
+    if os.path.exists(os.path.join(path, 'GHaplo', '__init__.py')):
+        print("insert path:", path)
         sys.path.insert(0, path)
         break
     path = os.path.dirname(path)
 
+print(sys.path)

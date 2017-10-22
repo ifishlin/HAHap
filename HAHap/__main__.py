@@ -40,18 +40,18 @@ def ensure_pysam_version():
     from pysam import __version__ as pysam_version
     from distutils.version import LooseVersion
     if LooseVersion(pysam_version) < LooseVersion("0.8.1"):
-        sys.exit("WhatsHap requires pysam >= 0.8.1")
+        sys.exit("HAHap requires pysam >= 0.8.1")
 
 
 def main(argv=sys.argv[1:]):
     ensure_pysam_version()
-    parser = HelpfulArgumentParser(description=__doc__, prog='ghaplo')
+    parser = HelpfulArgumentParser(description=__doc__, prog='HAHap')
     parser.add_argument('--version', action='version', version='%(prog)s ' + 'b0.1')
     parser.add_argument('--debug', action='store_true', default=False, help='Print debug messages')
 
     subparsers = parser.add_subparsers()
     for command_name in COMMANDS:
-        module = importlib.import_module('.' + command_name, 'GHaplo')
+        module = importlib.import_module('.' + command_name, 'HAHap')
         subparser = subparsers.add_parser(command_name,
                                           help=module.__doc__.split('\n')[1], description=module.__doc__)
 
@@ -59,7 +59,7 @@ def main(argv=sys.argv[1:]):
         module.add_arguments(subparser)
 
     args = parser.parse_args(argv)
-    setup_logging(args.debug)
+    #setup_logging(args.debug)
 
     if not hasattr(args, 'module'):
         parser.error('Please provide the name of a subcommand to run')
