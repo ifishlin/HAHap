@@ -18,6 +18,7 @@ HAHap is a pure-python program. It required fellowing packages.
 
 Usage
 ---
+Git clone and execute it under bin directory 
 ```
 usage: python HAHap phase [--mms MMS] [--lct LCT] [--embed] [--lastops] VCF BAM OUT
 
