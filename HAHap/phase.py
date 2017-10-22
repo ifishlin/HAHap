@@ -11,7 +11,7 @@ from HAHap.blocks import main as blocks_main
 from HAHap.vcf import output_phasing2VCF, split_vcf_by_chrom
 from HAHap.variants import InputVcfReader
 from HAHap.entropy import create_pairs_sup, calc_cs_mx
-from GHaplo.assembly import HiMergeNode, ha_phasing, save_phasing
+from HAHap.assembly import HiMergeNode, ha_phasing, save_phasing
 from .timers import StageTimer
 #from .matrix import print_var_matrix
 
