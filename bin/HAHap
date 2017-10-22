@@ -4,5 +4,6 @@ try:
 except ImportError:
     pass
 
-from GHaplo.__main__ import main
+from HAHap.__main__ import main
+
 main()
