@@ -5,7 +5,6 @@ from .args import HelpfulArgumentParser
 
 COMMANDS = [
     'phase',
-    'cc',
     'vcf2ans',
 ]
 
@@ -40,7 +39,7 @@ def ensure_pysam_version():
     from pysam import __version__ as pysam_version
     from distutils.version import LooseVersion
     if LooseVersion(pysam_version) < LooseVersion("0.8.1"):
-        sys.exit("HAHap requires pysam >= 0.8.1")
+        sys.exit("WhatsHap requires pysam >= 0.8.1")
 
 
 def main(argv=sys.argv[1:]):

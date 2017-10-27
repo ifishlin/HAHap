@@ -6,7 +6,6 @@ import logging
 import sys
 import pysam
 from bisect import bisect_left
-from collections import OrderedDict
 
 logger = logging.getLogger()
 
@@ -80,7 +79,7 @@ def add_arguments(parser):
     arg('input_file', metavar='BAM', help='BAM file')
 
 
-def main(args, chrom, vars_loc, timer, vars_allele):
+def main(args, chrom, vars_loc, timer):
     timer.start('000.head') 
     vars_loc.append(sys.maxsize)
     len_locus = len(vars_loc)
@@ -102,13 +101,8 @@ def main(args, chrom, vars_loc, timer, vars_allele):
 
     read_map = dict()
 
-    ###
-    visited_set = set()
-    removed_set = set()
-    fragments = OrderedDict()
-    fragment_s = []
-    fragment_e = []
-    ###
+    # 0-based, end value not included
+    iter1 = samfile.fetch(reference=chrom, start=vars_loc[0]-1, end=vars_loc[-2])
 
     logger.info("hash implement")
     pre_locus = 0
@@ -116,143 +110,54 @@ def main(args, chrom, vars_loc, timer, vars_allele):
     c = 0
     timer.stop('000.head')
     timer.start('000.loop')
-    # 0-based, end value not included
-    for read in samfile.fetch(chrom, vars_loc[0]-1, vars_loc[-2]):
+    for read in iter1:
         timer.start('000.if')
+        if read.is_proper_pair:
+            timer.start('000.pre')
+            connected = set()
+            s = read.reference_start + 1  # transfer 1-base to 0-base
+            if read.is_read1 is True:
+                key = read.query_name + "_" + str(read.next_reference_start)
+            else:
+                key = read.query_name + "_" + str(read.reference_start)
 
-        if read.mapping_quality < args.mms:
-            continue
+            if read.mapping_quality < args.mms:
+                continue
 
-        if not read.is_proper_pair:
-            continue
-        timer.stop('000.if')
+            if s > pre_locus:
+                c = bisect_left(vars_loc, s)
+                # c = b_search_while(vars_loc, s)
+                pre_c = c
+                pre_locus = vars_loc[c]
+            else:
+                c = pre_c
+            timer.stop('000.pre')
 
-        timer.start('000.pre')
-        connected = set()
-        #connected_loc = []
-        #connected_allele = []
-        s = read.reference_start + 1  # transfer 1-base to 0-base
-        if read.is_read1 is True:
-            read_id = read.query_name + "_" + str(read.next_reference_start)
-        else:
-            read_id = read.query_name + "_" + str(read.reference_start)
-
-        ## start block finding
-        if s > pre_locus:
-            c = bisect_left(vars_loc, s)
-            #c = c + pre_c
-            # c = b_search_while(vars_loc, s)
-            pre_c = c
-            pre_locus = vars_loc[c]
-        else:
-            c = pre_c
-
-        timer.stop('000.pre')
-
-        timer.start('000.align')
-        aligned_pairs = read.get_aligned_pairs()
-        timer.stop('000.align')
-        timer.start('000.align2')
-        aligned = [i[1] for i in aligned_pairs]             
-        timer.stop('000.align2')
-
-
-        timer.start('003.trans')
-        region = trans_cigartuples_to_region(s, read.cigartuples)
-        timer.stop('003.trans')
-        timer.start('001.search')
-        for s, e in region:
-            while c < len_locus and vars_loc[c] <= e:
-                #connected.add(c)
-                #connected_loc.append(vars_loc[c])
-                idx = aligned_pairs[aligned.index(vars_loc[c]-1)][0]
-                if idx is not None and read.seq[idx] in vars_allele[c]:
+            timer.start('003.trans')
+            region = trans_cigartuples_to_region(s, read.cigartuples)
+            timer.stop('003.trans')
+            timer.start('001.search')
+            for s, e in region:
+                while c < len_locus and vars_loc[c] <= e:
                     connected.add(c)
-                    #connected_loc.append(vars_loc[c])
-                    #connected_allele.append(read.seq[idx])
-
-                if idx is not None and read.seq[idx] in vars_allele[c]:
-                    observed = read.seq[idx]
-                else:
-                    observed = '-'
-
-
-                if read_id in visited_set:
-                    is_pair_read = True
-                else:
-                    is_pair_read = False
-                    visited_set.add(read_id)
-
-                if read_id in fragments:
-                    if not is_pair_read:
-                        fragment.append((chrom, vars_loc[c], observed, ''))
-                    else:
-                        fragment = fragments[read_id]
-                        exist = [i[1] for i in fragment]
-                        observeds = [i[2] for i in fragment]
-                        if vars_loc[c] in exist and observed != observeds[exist.index(vars_loc[c])]:
-                            removed_set.add(read_id)
-                        elif vars_loc[c] in exist:
-                            pass
-                        else:
-                            fragment.append((chrom, vars_loc[c], observed, ''))
-                else:
-                    fragments[read_id] = [(chrom, vars_loc[c], observed, '')]
-
-                c += 1
-
-        timer.stop('001.search')
-        ## end block_finding
-
-        timer.start('002.putin')
-        if read_id in read_map:
-            uset = connected.union(read_map[read_id])
-            make_pair_connected(uset, locus_listed_dict)
-            del read_map[read_id]
-        else:
-            read_map[read_id] = connected
-
-        timer.stop('002.putin')
+                    c += 1
+            timer.stop('001.search')
+            timer.start('002.putin')
+            if key in read_map:
+                uset = connected.union(read_map[key])
+                '''
+                if len(uset) > 1:
+                    print("pair-end", key, uset, connected, read_map[key])
+                '''
+                make_pair_connected(uset, locus_listed_dict)
+                del read_map[key]
+            else:
+                read_map[key] = connected
+            timer.stop('002.putin')
+        else: 
+            pass
+        timer.stop('000.if')
     timer.stop('000.loop')
-
-    timer.start('002.remove')
-    for x in removed_set:
-        del fragments[x]
-
-    noninfo = []
-    '''
-    for x, y in fragments.items():
-        if len(y) < 2:
-            noninfo.append(x)
-    '''
-    for x, y in fragments.items():
-        a = [z[2] for z in y]
-        if '-' in a:
-            a.remove('-')
-        if len(a) < 2:
-            noninfo.append(x)
-
-    for x in noninfo:
-        del fragments[x] 
-    timer.stop('002.remove')
-
-
-    timer.start('002.loc_idx_dict')
-    loc_idx_dict = {y: x for x, y in dict(enumerate(vars_loc, 0)).items()}
-    timer.stop('002.loc_idx_dict')
-
-    timer.start('002.a')
-    for x, y in fragments.items():
-        fragment_s.append((x, loc_idx_dict[y[0][1]]))
-        fragment_e.append((x, loc_idx_dict[y[-1][1]]))       
-    timer.stop('002.a')
-
-    timer.start('002.sort')
-    fragment_s = sorted(fragment_s, key=lambda tup: tup[1]) 
-    fragment_e = sorted(fragment_e, key=lambda tup: tup[1])
-    timer.stop('002.sort')
-    #print(len(fragments))
-    #print(fragments)
 
     timer.start("000.end")
     for k, v in read_map.items():
@@ -275,4 +180,4 @@ def main(args, chrom, vars_loc, timer, vars_allele):
         if len(cc) > 1:
             connected_component.append(sorted(cc))
     timer.stop('003.walk')
-    return connected_component, fragments, fragment_s, fragment_e
+    return connected_component
