@@ -137,13 +137,10 @@ def main(args, chrom, vars_loc, timer, vars_allele):
         else:
             read_id = read.query_name + "_" + str(read.reference_start)
 
-        aligned_pairs = read.get_aligned_pairs()
-        aligned = [i[1] for i in aligned_pairs]             
-
         ## start block finding
         if s > pre_locus:
-            c = bisect_left(vars_loc[pre_c:], s)
-            c = c + pre_c
+            c = bisect_left(vars_loc, s)
+            #c = c + pre_c
             # c = b_search_while(vars_loc, s)
             pre_c = c
             pre_locus = vars_loc[c]
@@ -151,6 +148,14 @@ def main(args, chrom, vars_loc, timer, vars_allele):
             c = pre_c
 
         timer.stop('000.pre')
+
+        timer.start('000.align')
+        aligned_pairs = read.get_aligned_pairs()
+        timer.stop('000.align')
+        timer.start('000.align2')
+        aligned = [i[1] for i in aligned_pairs]             
+        timer.stop('000.align2')
+
 
         timer.start('003.trans')
         region = trans_cigartuples_to_region(s, read.cigartuples)
@@ -166,28 +171,33 @@ def main(args, chrom, vars_loc, timer, vars_allele):
                     #connected_loc.append(vars_loc[c])
                     #connected_allele.append(read.seq[idx])
 
+                if idx is not None and read.seq[idx] in vars_allele[c]:
+                    observed = read.seq[idx]
+                else:
+                    observed = '-'
 
-                    if read_id in visited_set:
-                        is_pair_read = True
+
+                if read_id in visited_set:
+                    is_pair_read = True
+                else:
+                    is_pair_read = False
+                    visited_set.add(read_id)
+
+                if read_id in fragments:
+                    if not is_pair_read:
+                        fragment.append((chrom, vars_loc[c], observed, ''))
                     else:
-                        is_pair_read = False
-                        visited_set.add(read_id)
-
-                    if read_id in fragments:
-                        if not is_pair_read:
-                            fragment.append((chrom, vars_loc[c], read.seq[idx], ''))
+                        fragment = fragments[read_id]
+                        exist = [i[1] for i in fragment]
+                        observeds = [i[2] for i in fragment]
+                        if vars_loc[c] in exist and observed != observeds[exist.index(vars_loc[c])]:
+                            removed_set.add(read_id)
+                        elif vars_loc[c] in exist:
+                            pass
                         else:
-                            fragment = fragments[read_id]
-                            exist = [i[1] for i in fragment]
-                            observeds = [i[2] for i in fragment]
-                            if vars_loc[c] in exist and read.seq[idx] != observeds[exist.index(vars_loc[c])]:
-                                removed_set.add(read_id)
-                            elif vars_loc[c] in exist:
-                                pass
-                            else:
-                                fragment.append((chrom, vars_loc[c], read.seq[idx], ''))
-                    else:
-                        fragments[read_id] = [(chrom, vars_loc[c], read.seq[idx], '')]
+                            fragment.append((chrom, vars_loc[c], observed, ''))
+                else:
+                    fragments[read_id] = [(chrom, vars_loc[c], observed, '')]
 
                 c += 1
 
@@ -210,13 +220,22 @@ def main(args, chrom, vars_loc, timer, vars_allele):
         del fragments[x]
 
     noninfo = []
+    '''
     for x, y in fragments.items():
         if len(y) < 2:
+            noninfo.append(x)
+    '''
+    for x, y in fragments.items():
+        a = [z[2] for z in y]
+        if '-' in a:
+            a.remove('-')
+        if len(a) < 2:
             noninfo.append(x)
 
     for x in noninfo:
         del fragments[x] 
     timer.stop('002.remove')
+
 
     timer.start('002.loc_idx_dict')
     loc_idx_dict = {y: x for x, y in dict(enumerate(vars_loc, 0)).items()}

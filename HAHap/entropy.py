@@ -62,6 +62,8 @@ def calc_cs_mx(pairs_sup, phase_loc, distance, lct, alpha=1):
     q2 = pairs_count_sorted[len(pairs_count_sorted)//2]
     max_coverage = pairs_count_sorted[-1]
 
+    print("q2:",q2)
+
     for pairs_key, sups in pairs_sup.items():
         base = pairs_key // phase_total
         shift = pairs_key % phase_total
@@ -69,15 +71,20 @@ def calc_cs_mx(pairs_sup, phase_loc, distance, lct, alpha=1):
         sup = sorted(sups.items(), key=operator.itemgetter(1), reverse=True)
         pairs_total = sum([p[1] for p in sup])
 
+        #print(base, shift, sups)
+
         max_score = np.NINF
         for idx, p in enumerate(sup):
             singleton_observed = True
             for q in sup[idx+1:]:
                 p_l, p_r = p[0].split("_")
                 q_l, q_r = q[0].split("_")
+                #print(p_l, p_r , q_l, q_r)
                 # heterozygous assumption
                 if p_l != q_l and p_r != q_r:
+                    # print("C,",singleton_observed)
                     singleton_observed = False
+                    #print(singleton_observed)
                     n, n1, n2, n3 = _calc_n1_n2(pairs_total, p[1], q[1])
                     score = normalized_score_scale_to_max(n, n1, n2, p[1]+q[1], max_coverage, alpha)
                     if distance == 5:
@@ -97,7 +104,9 @@ def calc_cs_mx(pairs_sup, phase_loc, distance, lct, alpha=1):
                             score -= 1e12
                         if score > max_score:
                             max_score = score
+                #print("A ",score)
 
+            #print("D ",singleton_observed)
             if singleton_observed:
                 n, n1, n2, n3 = _calc_n1_n2(p[1], p[1], 0)
                 score = normalized_score_scale_to_max(n, n1, n2, p[1], max_coverage, alpha) - 1e10
@@ -115,6 +124,9 @@ def calc_cs_mx(pairs_sup, phase_loc, distance, lct, alpha=1):
                 if score > max_score:
                     max_score = score
 
+                #print("B ",score)
+
+        #print("cs_mx["+str(base)+","+str(shift)+"] = ",max_score)
         cs_mx[base, shift] = max_score
         cs_mx[shift, base] = max_score
  

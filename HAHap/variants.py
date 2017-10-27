@@ -41,27 +41,49 @@ class InputVcfReader(object):
 
         fragments = OrderedDict()
 
+        '''
         if self.reads_proxy is None:
             self.reads_proxy = pysam.AlignmentFile(self.bam_file, "rb")
 
-        fragments = f
-
-        '''
         timer.start('021._read_variance_faster') 
-        #self._read_variance_faster(chrom, fragments, phase_loc, phase_allele, self.trust, timer)
+        self._read_variance_faster(chrom, fragments, phase_loc, phase_allele, self.trust, timer)
         timer.stop('021._read_variance_faster')
 
         timer.start('022.clear_matrix')
-        #self.clear_matrix(fragments) #?
+        self.clear_matrix(fragments) #?
         timer.stop('022.clear_matrix')
-        '''
+          
+        print(fragments)
+        print(f)
 
+        for k, v in fragments.items():
+            if k in f and v != f[k]:
+                print("old:",v)
+                print("new:",f[k])
+                f[k] = v
+
+        print("====")
+        for k, v in fragments.items():
+            if k in f and v != f[k]:
+                print("old:",v)
+                print("new:",f[k])
+        '''
+        fragments = f
+        # test
+        sf_mx = lil_matrix((len(fragments), len(phase_loc)), dtype=np.int8)
+        fragment_se = self._fill_sf_mx(sf_mx, fragments, phase_loc, self.coding)
+        # old
+        '''
         sf_mx = lil_matrix((len(fragments), len(phase_loc)), dtype=np.int8)
 
         timer.start('023.produce_var_matrix')
         fragment_se = self._fill_sf_mx(sf_mx, fragments, phase_loc, self.coding)
         timer.stop('023.produce_var_matrix')
-
+        '''
+        
+        #fragment_se3 = sorted(fragment_se2, key=lambda tup: tup[1])
+        #print(fragment_se3)
+        #return sf_mx2, f, fragment_se2, self.coding
         return sf_mx, fragments, fragment_se, self.coding
 
     # can we don't read this in
@@ -107,6 +129,9 @@ class InputVcfReader(object):
                 read_id = read.query_name + "_" + str(read.next_reference_start)
             else:
                 read_id = read.query_name + "_" + str(read.reference_start)
+
+            if read_id == 'HISEQ1:93:H2YHMBCXX:1:1108:4879:55953_81952627':
+                print("***", read_id)
  
             allele = ''
             aligned_pairs = read.get_aligned_pairs()
@@ -176,6 +201,7 @@ class InputVcfReader(object):
         timer.stop('024.fetch')
         timer.start('025.removed_set')
 
+        print("** remvoe", removed_set)
         for i in removed_set:
             del fragments[i]
         timer.stop('025.removed_set')
@@ -196,6 +222,54 @@ class InputVcfReader(object):
         loc_idx_dict = {y: x for x, y in dict(enumerate(phase_loc, 0)).items()}
 
         for read_id, variances in fragments.items():
+
+            min_loc = -1
+            max_loc = -1
+
+            for i in range(len(variances)):
+                if variances[i][1] in loc_idx_dict:
+                    min_loc = loc_idx_dict[variances[i][1]]
+
+            for i in range(len(variances) -1, -1, -1):
+                if variances[i][1] in loc_idx_dict:
+                    max_loc = loc_idx_dict[variances[i][1]]
+
+
+            max_loc = loc_idx_dict[variances[-1][1]]
+
+            for chrom, loci, allele, atype in variances:
+                if loci not in phase_loc:
+                    continue
+
+                h_idx = loc_idx_dict[loci]
+                if allele in coding:
+                    code = coding[allele]
+                else:
+                    code = code_num
+                    code_num += 1
+                    coding[allele] = code
+                    coding[code] = allele
+                sf_mx[v_idx, h_idx] = code
+            v_idx += 1
+
+            fragment_se.append((read_id, min_loc, max_loc))
+
+        return fragment_se
+    '''
+    @staticmethod
+    def _fill_sf_mx(sf_mx, fragments, phase_loc, coding):
+        """
+
+        """
+        # vertical
+        fragment_se = []
+        v_idx = 0
+        code_num = len(coding)/2
+
+        loc_idx_dict = {y: x for x, y in dict(enumerate(phase_loc, 0)).items()}
+
+        for read_id, variances in fragments.items():
+
             min_loc = loc_idx_dict[variances[0][1]]
             max_loc = loc_idx_dict[variances[-1][1]]
 
@@ -213,3 +287,4 @@ class InputVcfReader(object):
             v_idx += 1
 
         return fragment_se
+     '''

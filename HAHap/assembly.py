@@ -142,7 +142,7 @@ def get_pv_key(c1_idx, c2_idx, phase_total):
         sys.exit()
 
 
-def get_phased_haplo(c1_node, c2_node, c1_idx, c2_idx):
+def _get_anchors(c1_node, c2_node, c1_idx, c2_idx):
     """
     """
 
@@ -163,7 +163,7 @@ def get_phased_haplo(c1_node, c2_node, c1_idx, c2_idx):
     return c1_anchor, c2_anchor
 
 
-def hc_create_parent_node(c1_node, c2_node):
+def _ha_merge_two_nodes(c1_node, c2_node):
     """
     Hirarchical Clustering
     Create parent node of l_node, r_node.
@@ -182,7 +182,7 @@ def hc_create_parent_node(c1_node, c2_node):
 
 def _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, c2_node,
                    phase_loc, phase_allele, codes, fragments,
-                   fragment_se, read4, local_ops, lastops, timer):
+                   fragment_se, read4, embed_ops, last_ops, timer):
     """
     """
 
@@ -244,7 +244,7 @@ def _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, 
 
     timer.stop("061.reasonable solution")
 
-    if lastops and not (c1_anchor is None and c2_anchor is None):
+    if last_ops and not (c1_anchor is None and c2_anchor is None):
         # if ops and (bool(c1_anchor is None) != bool(c2_anchor is None)):
         # print("final", base, shift)
         # print(c1_node.name, c1_node.h1, c1_node.h2)
@@ -261,7 +261,7 @@ def _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, 
             c2_node.h2 = [e_min, ]
 
         sol1_h1, sol1_h2, sol2_h1, sol2_h2, sorted_name, t_sol1_h1, t_sol1_h2, t_sol2_h1, t_sol2_h2 \
-            = build_two_possible_sol(c1_node, c2_node)
+            = _build_two_sols(c1_node, c2_node)
 
         penalty_1 = 0
         penalty_2 = 0
@@ -297,9 +297,9 @@ def _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, 
                     chrom, loc, allele, _ = p
                     fragment_loc.append(phase_loc.index(loc))
                     fragment_allele.append(codes[allele])
-                timer.start("062.vote2")
-                p1, p2 = vote2(fragment_loc, fragment_allele, sol1_h1, sol1_h2, sol2_h1, sol2_h2, sorted_name)
-                timer.stop("062.vote2")
+                timer.start("062._local_MEC_search")
+                p1, p2 = _local_MEC_search(fragment_loc, fragment_allele, sol1_h1, sol1_h2, sol2_h1, sol2_h2, sorted_name)
+                timer.stop("062._local_MEC_search")
                 # print("p1,p2", p1,p2)
                 penalty_1 += p1
                 penalty_2 += p2
@@ -443,18 +443,18 @@ def _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, 
                 seam_point_cnt = seam_point_cnt + 1 if c + 1 in c2_name_list else seam_point_cnt
 
         b_threshold = 3
-        if seam_point_cnt > b_threshold and local_ops:
+        if seam_point_cnt > b_threshold and embed_ops:
             print("EMBED")
             # first four for voting(sorted), last four for return (non-sorted)
             '''
-            print("in_local_ops")
+            print("in_embed_ops")
             print(c1_name_list)
             print(c2_name_list)
             print(seam_point_cnt)
             '''
             # sorted, sorted_name, unsorted
             sol1_h1, sol1_h2, sol2_h1, sol2_h2, sorted_name, t_sol1_h1, t_sol1_h2, t_sol2_h1, t_sol2_h2 \
-                = build_two_possible_sol(c1_node, c2_node)
+                = _build_two_sols(c1_node, c2_node)
 
             penalty_1 = 0
             penalty_2 = 0
@@ -479,9 +479,9 @@ def _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, 
                         chrom, loc, allele, _ = p
                         fragment_loc.append(phase_loc.index(loc))
                         fragment_allele.append(codes[allele])
-                    timer.start("062.vote2")
-                    p1, p2 = vote2(fragment_loc, fragment_allele, sol1_h1, sol1_h2, sol2_h1, sol2_h2, sorted_name)
-                    timer.stop("062.vote2")
+                    timer.start("062._local_MEC_search")
+                    p1, p2 = _local_MEC_search(fragment_loc, fragment_allele, sol1_h1, sol1_h2, sol2_h1, sol2_h2, sorted_name)
+                    timer.stop("062._local_MEC_search")
                     # print("p1,p2", p1,p2)
                     penalty_1 += p1
                     penalty_2 += p2
@@ -565,9 +565,9 @@ def _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, 
     return [r for r in result[:2]]
 
 
-def vote2(fragment_loc, fragment_allele, sol1_h1, sol1_h2, sol2_h1, sol2_h2, sorted_name):
+def _local_MEC_search(fragment_loc, fragment_allele, sol1_h1, sol1_h2, sol2_h1, sol2_h2, sorted_name):
     '''
-    print("vote2")
+    print("_local_MEC_search")
     print(fragment_loc)
     print(fragment_allele)
     print(sol1_h1, sol1_h2)
@@ -579,44 +579,44 @@ def vote2(fragment_loc, fragment_allele, sol1_h1, sol1_h2, sol2_h1, sol2_h2, sor
     p2 = 0
     p3 = 0
     p4 = 0
-    for p, a in zip(fragment_loc, fragment_allele):
+    for loc, a in zip(fragment_loc, fragment_allele):
         # print("===", p, a)
         # check candidate 1
-        if p in sorted_name:
-            o1 = sol1_h1[sorted_name.index(p)]
-            o2 = sol1_h2[sorted_name.index(p)]
-            o3 = sol2_h1[sorted_name.index(p)]
-            o4 = sol2_h2[sorted_name.index(p)]
+        if loc in sorted_name:
+            o1 = sol1_h1[sorted_name.index(loc)]
+            o2 = sol1_h2[sorted_name.index(loc)]
+            o3 = sol2_h1[sorted_name.index(loc)]
+            o4 = sol2_h2[sorted_name.index(loc)]
             # print(o1, o2)
             # print(o3, o4)
             p1 = p1 if o1 == a else p1 + 1
             p2 = p2 if o2 == a else p2 + 1
             p3 = p3 if o3 == a else p3 + 1
             p4 = p4 if o4 == a else p4 + 1
+        else:
+            sys.exit()
 
     return min(p1, p2), min(p3, p4)
 
 
-def build_two_possible_sol(cluster1, cluster2):
+def _build_two_sols(c1_node, c2_node):
     """
-    print("build_two_possible_sol")
-    print(cluster1.name)
-    print(cluster1.h1)
-    print(cluster1.h2)
-    print(cluster2.name)
-    print(cluster2.h1)
-    print(cluster2.h2)
+    print("_build_two_sols")
+    print(c1_node.name)
+    print(c1_node.h1)
+    print(c1_node.h2)
+    print(c2_node.name)
+    print(c2_node.h1)
+    print(c2_node.h2)
     """
 
-    template_name = "_".join([cluster1.name, cluster2.name])
-    # print(template_name)
+    template_name = "_".join([c1_node.name, c2_node.name])
     template_name = list(map(int, template_name.split("_")))
-    # print(template_name)
 
-    template_sol1_h1 = cluster1.h1 + cluster2.h1
-    template_sol1_h2 = cluster1.h2 + cluster2.h2
-    template_sol2_h1 = cluster1.h1 + cluster2.h2
-    template_sol2_h2 = cluster1.h2 + cluster2.h1
+    template_sol1_h1 = c1_node.h1 + c2_node.h1
+    template_sol1_h2 = c1_node.h2 + c2_node.h2
+    template_sol2_h1 = c1_node.h1 + c2_node.h2
+    template_sol2_h2 = c1_node.h2 + c2_node.h1
 
     sol1_h1 = list()
     sol1_h2 = list()
@@ -663,9 +663,14 @@ def merge_single_link_vector(reduced_mx, vector, i, j, timer):
         a = i_row[idx]
         b = j_row[idx]
 
+        #print(a, b)
+
         t = a if a > b else b
+        reduced_mx[i][idx] = t
+        #print("reduced_mx["+str(i)+"]["+str(idx)+"] = ", t)
+        #reduced_mx[idx][i] = t
+        #print("reduced_mx["+str(idx)+"]["+str(i)+"] = ", t)
         reduced_mx[idx][i] = t
-        #i_row[idx] = t
 
     # remove col and row of data j
     reduced_mx[:, j] = -np.inf
@@ -696,7 +701,7 @@ def merge_single_link_vector(reduced_mx, vector, i, j, timer):
 
     timer.stop("merge_single_link_vector")
 
-def ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, read4, local_ops, lastops, timer):
+def ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, read4, embed_ops, last_ops, timer):
     """
     Args:
     Return:
@@ -715,7 +720,7 @@ def ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, frag
     ops_threshold = 0.005
     ops_cutoff = ceil(phase_total * ops_threshold)
     
-    last_ops = False
+    last_ops_flag = False
 
     # vertex_1_idx, < vertex_2_idx
     vertex_1_idx, vertex_2_idx = argmax_single_link_vector(single_link_vector, timer)
@@ -727,31 +732,32 @@ def ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, frag
         for rank in range(0, v1_cnt * v2_cnt):
             x, y, cs = get_max_cs(v1_name, v2_name, cs_mx, rank)
 
-            if (phase_total - merge_cnt) <= ops_cutoff and lastops: # and cs < -100:
-                # if phase_total - merge_cnt == 1 and lastops:
-                last_ops = True
+            if (phase_total - merge_cnt) <= ops_cutoff and last_ops: # and cs < -100:
+                # if phase_total - merge_cnt == 1 and last_ops:
+                last_ops_flag = True
 
             c1_node, c2_node, c1_idx, c2_idx = (vars_pool[v1_name], vars_pool[v2_name], x, y) \
                                     if y > x else (vars_pool[v2_name], vars_pool[v1_name], y, x)
 
             pv_key = get_pv_key(c1_idx, c2_idx, phase_total)
 
+            # ?
             if cs == np.NINF:
                 break
 
             if pv_key in pairs_sup:
-                node = hc_create_parent_node(c1_node, c2_node)
+                node = _ha_merge_two_nodes(c1_node, c2_node)
                 #print("name")
                 #print(c1_node.name, c2_node.name)
                 #print(node.name)
-                c1_anchor, c2_anchor = get_phased_haplo(c1_node, c2_node, c1_idx, c2_idx)
+                c1_anchor, c2_anchor = _get_anchors(c1_node, c2_node, c1_idx, c2_idx)
 
                 sorted_sup = sorted(pairs_sup[pv_key].items(), key=operator.itemgetter(1, 0), reverse=True)
 
                 timer.start("060._ha_phasing_main")
                 node.h1, node.h2 = _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, c2_node,
                                         phase_loc, phase_allele, codes,
-                                        fragments, fragment_se, read4, local_ops, last_ops, timer)
+                                        fragments, fragment_se, read4, embed_ops, last_ops_flag, timer)
                 timer.stop("060._ha_phasing_main")
 
                 # careful for end condition? only one None?

@@ -13,7 +13,7 @@ from HAHap.variants import InputVcfReader
 from HAHap.entropy import create_pairs_sup, calc_cs_mx
 from HAHap.assembly import HiMergeNode, ha_phasing, save_phasing
 from .timers import StageTimer
-#from .matrix import print_var_matrix
+from .matrix import print_var_matrix
 
 sys.setrecursionlimit(30000)
 
@@ -64,6 +64,7 @@ def main(args):
         timer.stop("00.blocks_main")
         print('connected_component,:', len(connected_component))
         #print(connected_component)
+        #print(var_loc)
         f_s_name, f_s_idx = zip(*f_s)
         f_e_name, f_e_idx = zip(*f_e)
         pipeline(args, str(chrom), connected_component, var_allele, var_str_loc, timer, f, f_s_name, f_s_idx, f_e_name, f_e_idx)
@@ -95,6 +96,7 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer, f, f_
     reader = None
     from bisect import bisect_left, bisect_right
     for cc_idx, cc_sorted in enumerate(connected_component):
+        #print(cc_idx, cc_sorted)
         f_s_cc = cc_sorted[0]
         f_e_cc = cc_sorted[-1]
 
@@ -105,8 +107,49 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer, f, f_
         d = bisect_right(f_e_idx, f_e_cc) 
         timer.stop('01.search')
         timer.start('01.d')
-        n = set(f_e_name[c:d]) | set(f_s_name[a:b])
-        d = dict((k, f[k]) for k in n)
+        #n = set(f_e_name[c:d]) | set(f_s_name[a:b])
+        #dd = dict((k, f[k]) for k in n)
+        
+        od = collections.OrderedDict()
+        n1 = f_e_name[c:d]
+        n2 = f_s_name[a:b]
+        n1_idx = 0
+        n2_idx = 0
+        #print(len(n1),  len(n2))
+        while n1_idx < len(n1) or n2_idx < len(n2):
+            while n1_idx < len(n1) and n1[n1_idx] in od:
+                n1_idx += 1
+
+            while n2_idx < len(n2) and n2[n2_idx] in od:
+                n2_idx += 1
+
+            #print(n1_idx, n2_idx, len(od))
+
+            if n1_idx != len(n1) and n2_idx != len(n2):
+                if f[n1[n1_idx]][0][1] > f[n2[n2_idx]][0][1]:
+                    if n2[n2_idx] not in od:
+                        od[n2[n2_idx]] = f[n2[n2_idx]]
+                    n2_idx += 1
+                else:
+                    if n1[n1_idx] not in od:
+                        od[n1[n1_idx]] = f[n1[n1_idx]] 
+                    n1_idx += 1
+            elif n1_idx != len(n1):
+                while n1_idx < len(n1) and n1[n1_idx] in od:
+                    if n1[n1_idx] not in od:
+                        od[n1[n1_idx]] = f[n1[n1_idx]]
+                    n1_idx += 1
+            else:
+                while n2_idx < len(n2) and n2[n2_idx] in od: 
+                    if n2[n2_idx] not in od:
+                        od[n2[n2_idx]] = f[n2[n2_idx]]
+                    n2_idx += 1
+
+
+        #print(len(dd))
+        #print(len(od))
+        #print(od)
+
         timer.stop('01.d')
         #print(d)
         #print(len(d), len(n))
@@ -134,15 +177,15 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer, f, f_
 
         # SNP-fragment matrix
         timer.start('02.get_readmtx')
-        sf_mx, fragments, fragment_se, codes = reader.get_sf_mx(chrom, phase_loc, phase_allele, timer, d)
+        sf_mx, fragments, fragment_se, codes = reader.get_sf_mx(chrom, phase_loc, phase_allele, timer, od)
         timer.stop('02.get_readmtx')
         if len(fragment_se) == 0:
             remove_dict[cc_idx] = None
             print("No qualified fragment")
             continue
 
-        print(len(f))
-        print(len(fragments))
+        #print(len(f))
+        #print(len(fragments))
 
         '''
         for x, y in f.items():
@@ -164,7 +207,8 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer, f, f_
         timer.start('04.calc_score_matrix')
         cs_mx = calc_cs_mx(pairs_sup, phase_loc, args.distance, args.lct)
         timer.stop('04.calc_score_matrix')
-        # print_var_matrix(x, fragment_se, n, ':')
+        #print(sf_mx)
+        print_var_matrix(sf_mx, fragment_se, codes, ':')
 
         vars_pool = dict()
 
