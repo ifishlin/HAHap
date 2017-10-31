@@ -28,10 +28,10 @@ BAM          Read mapped file
 OUT          VCF file with predicted haplotype. (HP tags)
 
 optional arguments:
---mms        Minimum read mapping quality (default:0)
---lct        Threshold of low coverage pairs (default:median)
---embed      Enable optimal search in embed case (default:enabled)
---last       Enable optimal search in ambiguous case (default:enabled) 
+--mms            Minimum read mapping quality (default:0)
+--lct            Threshold of low coverage pairs (default:median)
+--embed_disable  Enable optimal search in embed case (default:enabled)
+--last_disable   Enable optimal search in ambiguous case (default:enabled) 
         
 ```
 
