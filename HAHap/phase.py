@@ -10,10 +10,10 @@ import os
 from HAHap.blocks import main as blocks_main
 from HAHap.vcf import output_phasing2VCF, split_vcf_by_chrom
 from HAHap.variants import InputVcfReader
-from HAHap.entropy import create_pairs_sup, calc_cs_mx
+from HAHap.confident import create_pairs_sup, calc_cs_mx
 from HAHap.assembly import HiMergeNode, ha_phasing, save_phasing
 from .timers import StageTimer
-#from .matrix import print_var_matrix
+from .matrix import print_var_matrix
 
 sys.setrecursionlimit(30000)
 
@@ -22,51 +22,49 @@ logger = logging.getLogger(__name__)
 def add_arguments(parser):
     arg = parser.add_argument
     arg('variant_file', metavar='VCF', help='VCF file with variants needed to be phased')
-    arg('bam_file', metavar='BAM', help='BAM file')
-    arg('output_file', metavar='OUT', help='Predicted file')
-    # arg('cc_file', metavar='CC', help='CC file')
-    arg('--mms', dest='mms', default=0, type=int, help='mininal mapping score')
-    arg('--d', dest='distance', default=0, type=int, help='distance')
-    arg('--lct', dest='lct', default=0, type=int, help='low coverage threshold')
-    arg('--los_off', dest='los', action='store_false', help='off local optimal search')
-    arg('--read4', dest='read4', action='store_true', help='read4')
-    arg('--lastops', dest='lastops', action='store_true', help='lastops')
+    arg('bam_file', metavar='BAM', help='Read mapped file')
+    arg('output_file', metavar='OUT', help='VCF file with predicted haplotype. (HP tags)')
+    arg('--mms', dest='mms', default=0, type=int, help='Minimum read mapping quality (default:0)')
+    arg('--lct', dest='lct', default=0, type=int, help='Threshold of low coverage pairs (default:median)')
+    arg('--embed_disable', dest='embed_disable', action='store_false', help='Disable optimal search in embed case.')
+    arg('--last_disable', dest='last_disable', action='store_false', help='Disable optimal search in ambiguous case.')
 
 
 def main(args):
     if os.path.isfile(args.output_file):
         os.remove(args.output_file)
 
-    # if os.path.isfile(args.cc_file):
-    #     os.remove(args.cc_file)
+    logger.info("=== Start HAHap phasing ===")
+    logger.info("Parameters: Minimum mapping quality = " + str(args.mms))
+    logger.info("Parameters: Threshold of low coverage " + ("... Median" if args.lct == 0 else "= " + str(args.lct)))
+    logger.info("Parameters: Embed optimal search ... " + ("Enable" if args.embed_disable == True else "Disable"))
+    logger.info("Parameters: Last optimal search ... " + ("Enable" if args.last_disable == True else "Disable"))
 
     timer = StageTimer()
 
-    # chrom: allele, str loc
+    logger.info("")
+    logger.info("=== Read Heterozygous Data ===")
     var_chrom_dict = split_vcf_by_chrom(args.variant_file)
     var_chrom_list = sorted(var_chrom_dict.items())
 
-    print("mms", args.mms)
-    print("distance", args.distance)
-    print("lct", args.lct)
-    print("los", args.los)
-    print("read4", args.read4)
-    print("lastops", args.lastops)
-
     for chrom, (var_allele, var_str_loc) in var_chrom_list:
-        logging.info(chrom)
-        logger.warning('a')
-        logger.info('b')
+        logger.info("")
+        logger.info("=== Build Connected Component ===")
         var_loc = list(map(int, var_str_loc))
-        #print(chrom, len(var_loc), len(var_allele), len(var_str_loc))
         timer.start("00.blocks_main")
         connected_component = blocks_main(args, str(chrom), var_loc, timer)
         timer.stop("00.blocks_main")
-        #print('connected_component,:', len(connected_component))
+        logger.info("Chromosome " + str(chrom))
+        logger.info("Found variant block : " + str(len(connected_component)))
+        logger.info("Phaing proceeding ... ")
         pipeline(args, str(chrom), connected_component, var_allele, var_str_loc, timer)
-        # output_cc2csv(args.cc_file, key, connected_component, var_loc)
-    _timer_summary(timer)
+        logger.info("Phaing end and Output results")
+    #_timer_summary(timer)
 
+    logger.info("")
+    logger.info("=== End HAHap phasing ===")
+    logger.info("")
+    _timer_summary(timer)
 
 def _timer_summary(timer):
     print("_timer_summary")
@@ -108,7 +106,7 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer):
         #  build matrix creater
         timer.start('02.prepare2')
         if reader is None:
-            reader = InputVcfReader(args.bam_file, 0, args.mms)
+            reader = InputVcfReader(args.bam_file, args.mms)
         #else:
         #    reader.reset(args.bam_file, 0, args.mms)
         timer.stop('02.prepare2')
@@ -131,9 +129,9 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer):
             continue
         timer.stop('03.pv_dict')
         timer.start('04.calc_score_matrix')
-        cs_mx = calc_cs_mx(pairs_sup, phase_loc, args.distance, args.lct)
+        cs_mx = calc_cs_mx(pairs_sup, phase_loc, args.lct)
         timer.stop('04.calc_score_matrix')
-        # print_var_matrix(x, fragment_se, n, ':')
+        #print_var_matrix(sf_mx, fragment_se, codes, ':')
 
         vars_pool = dict()
 
@@ -146,9 +144,9 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer):
         timer.stop('05.create_pool')
 
         timer.start('06.ha_phasing')
-        #print(args.los, args.lastops)
-        ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, args.read4, args.los, args.lastops, timer)
-        #ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, timer, args.los, fragments, fragment_se, args.read4, args.lastops)
+        #print(args.embed_disable, args.last_disable)
+        ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, args.embed_disable, args.last_disable, timer)
+        #ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, timer, args.embed_disable, fragments, fragment_se, args.read4, args.last_disable)
         timer.stop('06.ha_phasing')
 
         if len(vars_pool) > 1:

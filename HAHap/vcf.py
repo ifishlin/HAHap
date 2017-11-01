@@ -2,29 +2,6 @@ import logging
 
 logger = logging.getLogger()
 
-
-def output_CCs2VCF(connected_components, cc_allele_Mm, cc_idx_list, chrom=1):
-    for cc in connected_components:
-        vcf_file = open(str(cc[0]) + ".in.vcf", 'w')
-        for locus in cc:
-            vcf_file.write('\t'.join([str(chrom), cc_idx_list[locus], '.', '\t'.join(cc_allele_Mm[locus]),
-                                      '.\t.\t.\t.\t.\t\n']))
-
-
-def output_CC2VCF(connected_component, cc_allele_Mm, cc_idx_list, chrom=1):
-    """
-    """
-    sorted_cc = sorted(connected_component)
-    out_file = str(sorted_cc[0]) + ".in.vcf"
-    vcf_file = open(out_file, 'w')
-    for locus in sorted_cc:
-        vcf_file.write('\t'.join([str(chrom), cc_idx_list[locus], '.', '\t'.join(cc_allele_Mm[locus]),
-                                  '.\t.\t.\t.\t.\t\n']))
-    
-    vcf_file.close()
-    return out_file
-
-
 def output_phasing2VCF(input_vcf, output_file, output_dict, chrom, encoding_table):
     """
     """
@@ -46,22 +23,6 @@ def output_phasing2VCF(input_vcf, output_file, output_dict, chrom, encoding_tabl
                 myfile.write(line)
 
         input_file.close()
-
-
-def output_cc2csv(output_file, chrom, connected_components, cc_idx, block_min=2):
-    """
-    """
-    chrom = str(chrom)
-    with open(output_file, "a") as myfile:
-        serial = 0
-        for c in connected_components:
-            if len(c) < block_min:
-                continue
-            serial += 1
-            myfile.write("---- chromesome " + chrom + " ---- serial " + str(serial) + " ----" + '\n')
-            for i in c:
-                myfile.write('\t'.join([chrom, cc_idx[i], '\n']))
-            # myfile.write('\t'.join([chrom, c]))
 
 
 def split_vcf_by_chrom(variant_file, indel=False):
@@ -94,12 +55,10 @@ def split_vcf_by_chrom(variant_file, indel=False):
 
             pre = i
             chrom = c
-            logger.info("chromosome " + chrom)
         else:
             if pre == i:
-                logger.warning("duplicate location " + i)
+                logger.warning("Duplicate location " + i + ", retain last record")
                 while vars_str_loc[-1] == pre:
-                    logger.warning("DELETE")
                     del vars_allele[-1]
                     del vars_str_loc[-1]
                 continue
@@ -108,6 +67,7 @@ def split_vcf_by_chrom(variant_file, indel=False):
             vars_allele.append([m, n])
             vars_str_loc.append(i)
 
+    logger.info("Chromosome " + chrom + ". Found variants : " + str(len(vars_str_loc)))
     var_chrom_dict[int(chrom)] = [vars_allele, vars_str_loc]
 
     return var_chrom_dict

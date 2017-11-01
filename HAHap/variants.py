@@ -4,40 +4,27 @@ import logging
 from collections import OrderedDict
 import pysam
 import numpy as np
+from itertools import chain
 from scipy.sparse import csr_matrix, lil_matrix
-
+from HAHap.blocks import trans_cigartuples_to_region, trans_loc_to_cigaridx, trans_loc_to_alignidx
 
 class InputVcfReader(object):
     """
     """
     coding = {'A': 1, 'T': 2, 'C': 3, 'G': 4, 1: 'A', 2: 'T', 3: 'C', 4: 'G', 0: ' ', ' ': 0, 6: '-', '-': 6}
 
-    def __init__(self, bam_file, min_base_quality, min_read_quality,
+    def __init__(self, bam_file, min_read_quality,
                  indels=False, trust=True):
         self.bam_file = bam_file
         self.indels = indels
-        self.min_base_quality = min_base_quality
         self.min_read_quality = min_read_quality
         self.trust = trust
         self.reads_proxy = None
         self.logging = logging
 
-    # @remove 
-    def reset(self, bam_file, min_base_quality, min_read_quality, indels=False,
-              trust=True):
-        self.bam_file = bam_file
-        self.indels = indels
-        self.min_base_quality = min_base_quality
-        self.min_read_quality = min_read_quality
-        self.trust = trust
-        self.logging = logging
 
     def get_sf_mx(self, chrom, phase_loc, phase_allele, timer):
-        """
-        Args:
-
-        Return:
-        """
+        """"""
 
         fragments = OrderedDict()
 
@@ -60,12 +47,9 @@ class InputVcfReader(object):
 
         return sf_mx, fragments, fragment_se, self.coding
 
-    # can we don't read this in
     @staticmethod
     def clear_matrix(fragments):
-        """
-        Remove unqualified read from v_desc_dict. (1). remove reads that cover less than two variants.
-        """
+        """"""
         noninfo = []
         for x, y in fragments.items():
             a = [z[2] for z in y]
@@ -78,10 +62,7 @@ class InputVcfReader(object):
             del fragments[x]
 
     def _read_variance_faster(self, chrom, fragments, phase_loc, phase_allele, trust, timer):
-        """
-        Read raw NGS data of each variants from sam file.
-
-        """
+        """"""
 
         # 0-base, end value not included
         f_loc = phase_loc[0] - 1
@@ -90,39 +71,103 @@ class InputVcfReader(object):
         visited_set = set()
         removed_set = set()
 
+        #print("==", chrom, f_loc, l_loc)
         timer.start('024.fetch')
         for read in self.reads_proxy.fetch(chrom, f_loc, l_loc):
             timer.stop('024.fetch')
+
+            timer.start('024.if')
             if read.mapping_quality < self.min_read_quality:
                 continue
 
             if not read.is_proper_pair:
                 continue
+            timer.stop('024.if')
 
+            timer.start('024.id')
+            read_id = read.query_name
+            r_st = read.reference_start
+            # read.reference_end does not involved
+            r_ed = read.reference_end - 1
+            r_cigar = read.cigartuples
+
+            '''
             if read.is_read1:
                 read_id = read.query_name + "_" + str(read.next_reference_start)
             else:
                 read_id = read.query_name + "_" + str(read.reference_start)
- 
+            '''
+            timer.stop('024.id') 
+
+            timer.start('024.align0')
             allele = ''
-            aligned_pairs = read.get_aligned_pairs()
-            aligned = [i[1] for i in aligned_pairs]
+            #aligned_pairs = read.get_aligned_pairs()
+            timer.stop('024.align0')
+            timer.start('024.align1')
+            #aligned_pairs = read.get_aligned_pairs(matches_only=True)
+            timer.stop('024.align1')
+            timer.start('024.align2')
+            #aligned = [i[1] for i in aligned_pairs]
+            timer.stop('024.align2')
+            timer.start('024.align3')
+            #region = trans_cigartuples_to_region(r_st, read.cigartuples)   
+            timer.stop('024.align3')
+            timer.start('024.align4')
+            #chn = [i for j in [range(r[0], r[1]+1) for r in region] for i in j]
+            timer.stop('024.align4')
+            timer.start('024.align5')
+            chn2 = range(r_st, r_ed + 1)
+            timer.stop('024.align5')
 
+
+            timer.start('024.loop')
             for var_idx, v in enumerate(phase_loc):
-                v_0_base = v-1
-                # switch to binary search
-                if v_0_base > read.reference_end - 1:  # one past last alignment
-                    break
-                if v_0_base < read.reference_start:
-                    continue
+                v_0_base = v - 1
 
-                if v_0_base in range(read.reference_start, read.reference_end):
+                if v_0_base < r_st:
+                    continue
+                if v_0_base > r_ed:
+                    break
+
+                #if v_0_base in chn:
+                #if v_0_base in range(read.reference_start, read.reference_end):
+                if v_0_base in chn2:
+                    timer.start('024.loop_pre')
+                    #t = trans_loc_to_cigaridx(v_0_base, region)
+                    r = trans_loc_to_alignidx(v_0_base, r_st, read.cigartuples)
+                    if r is None:
+                        observed = '-'
+                    else:
+                        observed = read.query_sequence[r]
+                    '''
+                    if t is None and r is not None:
+                        print("---")
+                        print(v_0_base, t, r)
+                        print(aligned_pairs)
+                        print(read.get_aligned_pairs())
+                        print(read.cigartuples)
+                        print("---")
+                    if t is None:
+                        continue
                     aligned_idx = aligned.index(v_0_base)
+                    #if t != aligned_idx:
+                    if r != aligned_pairs[t][0]:
+                        print(v_0_base)
+                        print(t, aligned_idx, aligned_pairs[t][0], r)
+                        print(aligned_pairs)
+                        print(read.get_aligned_pairs())
+                    observed = read.query_sequence[aligned_pairs[t][0]]
+
+                    if v_0_base not in aligned:
+                       continue
+                    aligned_idx = aligned.index(v_0_base)
+
                     if aligned_pairs[aligned_idx][0] is None:
                         # gap in read
                         observed = '-'
                     else:
                         observed = read.seq[aligned_pairs[aligned_idx][0]]
+                    '''
 
                     if observed not in phase_allele[var_idx] and trust:
                         allele = '-'
@@ -135,6 +180,8 @@ class InputVcfReader(object):
                         is_pair_read = False
                         visited_set.add(read_id)
 
+                    timer.stop('024.loop_pre')
+                    timer.start('024.overlap')
                     if read_id in fragments:
                         if not is_pair_read:
                             fragments[read_id].append((chrom, v, allele, ''))
@@ -151,22 +198,9 @@ class InputVcfReader(object):
                                 fragment.append((chrom, v, allele, '')) 
                     else:
                         fragments[read_id] = [(chrom, v, allele, '')]
+                    timer.stop('024.overlap')
 
-                    '''
-                    if(read_id in fragments):
-                        exist     = list(map(lambda i:i[1],fragments[read_id]))
-                        observeds = list(map(lambda i:i[2],fragments[read_id]))
-                        if v in exist and allele != observeds[exist.index(v)]:
-                            removed_set.add(read_id) 
-                        elif v in exist:
-                            continue
-                        else:
-                            fragments[read_id].append((chrom, v, allele, ''))
-                    else:
-                        fragments[read_id] = [(chrom, v, allele, '')]
-                    timer.stop('fragments')
-                    '''
-
+            timer.stop('024.loop')
             timer.start('024.fetch')
         timer.stop('024.fetch')
         timer.start('025.removed_set')
@@ -175,14 +209,13 @@ class InputVcfReader(object):
             del fragments[i]
         timer.stop('025.removed_set')
 
+
         return
 
 
     @staticmethod
     def _fill_sf_mx(sf_mx, fragments, phase_loc, coding):
-        """
-
-        """
+        """"""
         # vertical
         fragment_se = []
         v_idx = 0

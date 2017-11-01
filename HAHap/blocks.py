@@ -34,33 +34,65 @@ def make_pair_connected(cc, locus_listed_dict):
             locus_listed_dict[i].add(j)
             locus_listed_dict[j].add(i)
 
+def trans_loc_to_alignidx(loc, r_st, cigartuples):  
+    # only work with get_aligned_pairs(matches_only=True)
+    #print("+++", loc, r_st)
+    idx = 0
+    d = loc - r_st + 1
+    for c, l in cigartuples: 
+        #print(c, l, d)
+        if c == 0:
+            if l >= d:
+                return idx + d - 1
+            else:
+               d = d - l
+               idx += l
+        elif c == 1:
+            idx += l
+        elif c == 2:
+            if l >= d:
+                return None
+            d = d - l 
+        elif c == 4:
+            idx += l
+        #print("idx", idx, "d", d)
+    return None
 
-def trans_cigartuples_to_region(idx, cigarstuples):
+def trans_loc_to_cigaridx(loc, region):
+    # only work with get_aligned_pairs(matches_only=True)
+    idx = 0
+    rs = region[0][0]
+    for r in region:
+        if loc in range(r[0], r[1]+1):
+            idx += loc - r[0]
+            return idx
+        idx += (r[1] - r[0] + 1)
+    return None
 
-    BAM_CMATCH = 0
-    BAM_CINS = 1
-    BAM_CDEL = 2
-    BAM_CREF_SKIP = 3
-    BAM_CSOFT_CLIP = 4
-    BAM_CHARD_CLIP = 5
+def trans_cigartuples_to_region(start, cigartuples):
+    """
+    """
+    #BAM_CMATCH = 0
+    #BAM_CINS = 1
+    #BAM_CDEL = 2
+    #BAM_CREF_SKIP = 3
+    #BAM_CSOFT_CLIP = 4
+    #BAM_CHARD_CLIP = 5
 
     region = []
-    start = idx
     end = 0
-    for c, l in cigarstuples:
+    for c, l in cigartuples:
 
-        if c == BAM_CMATCH:
+        if c == 0:
             end = start + l - 1
             region.append([start, end])
             start = end + 1
-        elif c == BAM_CINS:
-            pass
-        elif c == BAM_CDEL:
+        #elif c == BAM_CINS:
+        #    pass
+        elif c == 2:
             start = start + l  # next
-        elif c == BAM_CREF_SKIP:
-            pass
-        else:
-            pass
+        #elif c == BAM_CREF_SKIP:
+        #    pass
 
     return region
 
@@ -104,7 +136,6 @@ def main(args, chrom, vars_loc, timer):
     # 0-based, end value not included
     iter1 = samfile.fetch(reference=chrom, start=vars_loc[0]-1, end=vars_loc[-2])
 
-    logger.info("hash implement")
     pre_locus = 0
     pre_c = 0
     c = 0
@@ -112,58 +143,62 @@ def main(args, chrom, vars_loc, timer):
     timer.start('000.loop')
     for read in iter1:
         timer.start('000.if')
-        if read.is_proper_pair:
-            timer.start('000.pre')
-            connected = set()
-            s = read.reference_start + 1  # transfer 1-base to 0-base
-            if read.is_read1 is True:
-                key = read.query_name + "_" + str(read.next_reference_start)
-            else:
-                key = read.query_name + "_" + str(read.reference_start)
-
-            if read.mapping_quality < args.mms:
-                continue
-
-            if s > pre_locus:
-                c = bisect_left(vars_loc, s)
-                # c = b_search_while(vars_loc, s)
-                pre_c = c
-                pre_locus = vars_loc[c]
-            else:
-                c = pre_c
-            timer.stop('000.pre')
-
-            timer.start('003.trans')
-            region = trans_cigartuples_to_region(s, read.cigartuples)
-            timer.stop('003.trans')
-            timer.start('001.search')
-            for s, e in region:
-                while c < len_locus and vars_loc[c] <= e:
-                    connected.add(c)
-                    c += 1
-            timer.stop('001.search')
-            timer.start('002.putin')
-            if key in read_map:
-                uset = connected.union(read_map[key])
-                '''
-                if len(uset) > 1:
-                    print("pair-end", key, uset, connected, read_map[key])
-                '''
-                make_pair_connected(uset, locus_listed_dict)
-                del read_map[key]
-            else:
-                read_map[key] = connected
-            timer.stop('002.putin')
-        else: 
-            pass
+        if not read.is_proper_pair or read.mapping_quality < args.mms:
+            continue
         timer.stop('000.if')
+
+        timer.start('000.connect')
+        connected = set()
+        timer.stop('000.connect')
+        timer.start('000.pre')
+        s = read.reference_start + 1  # transfer 0-base to 1-base
+        timer.stop('000.pre')
+
+        timer.start('000.pre2')
+        key = read.query_name
+
+        timer.stop('000.pre2')
+        timer.start('000.bisect')
+        if s > pre_locus:
+            c = bisect_left(vars_loc, s)
+            # c = b_search_while(vars_loc, s)
+            pre_c = c
+            pre_locus = vars_loc[c]
+        else:
+            c = pre_c
+        timer.stop('000.bisect')
+
+        timer.start('003.trans')
+        region = trans_cigartuples_to_region(s, read.cigartuples)
+        timer.stop('003.trans')
+        timer.start('001.search')
+        for s, e in region:
+            while c < len_locus and vars_loc[c] <= e:
+                connected.add(c)
+                c += 1
+        timer.stop('001.search')
+
+        '''
+        timer.start('000.pre2')
+        if len(connected) > 0:
+            key = read.query_name
+        timer.stop('000.pre2')
+        '''
+
+        timer.start('002.putin')
+        if key in read_map:
+            uset = connected.union(read_map[key])
+            make_pair_connected(uset, locus_listed_dict)
+            del read_map[key]
+        else:
+            read_map[key] = connected
+        timer.stop('002.putin')
     timer.stop('000.loop')
 
     timer.start("000.end")
     for k, v in read_map.items():
         make_pair_connected(v, locus_listed_dict)
 
-    logger.info("end hash implement")
     timer.stop("000.end")
 
     timer.start("000.close")

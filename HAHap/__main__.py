@@ -58,7 +58,7 @@ def main(argv=sys.argv[1:]):
         module.add_arguments(subparser)
 
     args = parser.parse_args(argv)
-    #setup_logging(args.debug)
+    setup_logging(args.debug)
 
     if not hasattr(args, 'module'):
         parser.error('Please provide the name of a subcommand to run')
