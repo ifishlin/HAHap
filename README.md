@@ -39,7 +39,7 @@ Data (Ashkenazim family)
 ---
 The answer set used in real data experiment. It created by the intersection between 
 
-* the [haplotype prediction of 10xGenomics](http://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio/analysis/10XGenomics_ChromiumGenome_LongRanger2.1_09302016/) and 
+* the [haplotype prediction of 10xGenomics](https://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio/analysis/10XGenomics_ChromiumGenome_LongRanger2.1_09302016/README) and 
 * the [variants calling result](https://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio/HG002_NA24385_son/NIST_Illumina_2x250bps/novoalign_bams/README) by GATK HaplotypeCaller 3.6. 
 
 
