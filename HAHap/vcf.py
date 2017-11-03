@@ -45,7 +45,11 @@ def split_vcf_by_chrom(variant_file, indel=False):
 
         if c != chrom:
             if chrom is not None:
+                logger.info("Found variants : " + str(len(vars_str_loc)) + "\n")
                 var_chrom_dict[int(chrom)] = [vars_allele, vars_str_loc]
+                logger.info("Reading Chromosome " + c)
+            else:
+                logger.info("Reading Chromosome " + c)
 
             vars_allele = []
             vars_str_loc = []

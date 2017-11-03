@@ -47,6 +47,11 @@ def main(args):
     var_chrom_dict = split_vcf_by_chrom(args.variant_file)
     var_chrom_list = sorted(var_chrom_dict.items())
 
+    print(len(var_chrom_dict))
+    print(len(var_chrom_list))
+
+    sys.exit()
+
     for chrom, (var_allele, var_str_loc) in var_chrom_list:
         logger.info("")
         logger.info("=== Build Connected Component ===")
@@ -117,7 +122,7 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer):
         timer.stop('02.get_readmtx')
         if len(fragment_se) == 0:
             remove_dict[cc_idx] = None
-            print("No qualified fragment")
+            #print("No qualified fragment")
             continue
 
         timer.start('03.pv_dict')
@@ -125,7 +130,7 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer):
 
         if len(pairs_sup) == 0:
             remove_dict[cc_idx] = None
-            print("No trusted allele")
+            #print("No trusted allele")
             continue
         timer.stop('03.pv_dict')
         timer.start('04.calc_score_matrix')

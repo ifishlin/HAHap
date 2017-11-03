@@ -356,7 +356,7 @@ def _local_pre_MEC_search(c1_node, c2_node, fragments, fragment_se, phase_loc, c
         if s > sorted_name[-1]:
             break
 
-        for i in range(s, e):
+        for i in range(s, e+1):
             if c1_f and c2_f:
                 break
             elif i in c1_node.name_split:

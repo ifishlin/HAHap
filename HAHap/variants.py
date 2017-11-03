@@ -99,22 +99,22 @@ class InputVcfReader(object):
             '''
             timer.stop('024.id') 
 
-            timer.start('024.align0')
-            allele = ''
+            #timer.start('024.align0')
+            #allele = ''
             #aligned_pairs = read.get_aligned_pairs()
-            timer.stop('024.align0')
-            timer.start('024.align1')
+            #timer.stop('024.align0')
+            #timer.start('024.align1')
             #aligned_pairs = read.get_aligned_pairs(matches_only=True)
-            timer.stop('024.align1')
-            timer.start('024.align2')
+            #timer.stop('024.align1')
+            #timer.start('024.align2')
             #aligned = [i[1] for i in aligned_pairs]
-            timer.stop('024.align2')
-            timer.start('024.align3')
+            #timer.stop('024.align2')
+            #timer.start('024.align3')
             #region = trans_cigartuples_to_region(r_st, read.cigartuples)   
-            timer.stop('024.align3')
-            timer.start('024.align4')
+            #timer.stop('024.align3')
+            #timer.start('024.align4')
             #chn = [i for j in [range(r[0], r[1]+1) for r in region] for i in j]
-            timer.stop('024.align4')
+            #timer.stop('024.align4')
             timer.start('024.align5')
             chn2 = range(r_st, r_ed + 1)
             timer.stop('024.align5')
