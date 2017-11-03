@@ -59,7 +59,7 @@ def main(args):
         logger.info("Phaing proceeding ... ")
         pipeline(args, str(chrom), connected_component, var_allele, var_str_loc, timer)
         logger.info("Phaing end and Output results")
-    _timer_summary(timer)
+    #_timer_summary(timer)
 
     logger.info("")
     logger.info("=== End HAHap phasing ===")
