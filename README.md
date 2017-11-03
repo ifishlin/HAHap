@@ -13,7 +13,7 @@ HAHap is a pure-python program. It required fellowing packages.
 
 * Python 3.x
 * Numpy (version >= 1.10)
-* Pysam (version >= 0.8)
+* Pysam (version >= 0.12)
 
 
 Usage
@@ -34,6 +34,15 @@ optional arguments:
 --last_disable   Enable optimal search in ambiguous case (default:enabled) 
         
 ```
+
+Data (Ashkenazim family)
+---
+The answer set used in real data experiment. It created by the intersection between 
+
+* the [haplotype prediction of 10xGenomics](https://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio/analysis/10XGenomics_ChromiumGenome_LongRanger2.1_09302016/README) and 
+* the [variants calling result](https://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio/HG002_NA24385_son/NIST_Illumina_2x250bps/novoalign_bams/README) by GATK HaplotypeCaller 3.6. 
+
+
 
 Authors
 ---
