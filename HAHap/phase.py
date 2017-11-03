@@ -47,11 +47,6 @@ def main(args):
     var_chrom_dict = split_vcf_by_chrom(args.variant_file)
     var_chrom_list = sorted(var_chrom_dict.items())
 
-    print(len(var_chrom_dict))
-    print(len(var_chrom_list))
-
-    sys.exit()
-
     for chrom, (var_allele, var_str_loc) in var_chrom_list:
         logger.info("")
         logger.info("=== Build Connected Component ===")
@@ -64,7 +59,7 @@ def main(args):
         logger.info("Phaing proceeding ... ")
         pipeline(args, str(chrom), connected_component, var_allele, var_str_loc, timer)
         logger.info("Phaing end and Output results")
-    #_timer_summary(timer)
+    _timer_summary(timer)
 
     logger.info("")
     logger.info("=== End HAHap phasing ===")
