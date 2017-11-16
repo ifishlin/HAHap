@@ -20,6 +20,12 @@ Usage
 ---
 Git clone and execute **bin/HAHap**.
 ```
+git clone https://github.com/ifishlin/HAHap
+cd HAHap/bin
+python HAHap phase vcf bam out
+```
+
+```
 usage: python HAHap phase [--mms MMS] [--lct LCT] [--embed] [--lastops] VCF BAM OUT
 
 positional arguments
