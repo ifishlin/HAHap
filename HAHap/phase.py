@@ -64,7 +64,7 @@ def main(args):
     logger.info("")
     logger.info("=== End HAHap phasing ===")
     logger.info("")
-    _timer_summary(timer)
+    #_timer_summary(timer)
 
 def _timer_summary(timer):
     print("_timer_summary")
