@@ -56,5 +56,5 @@ The answer set used in real data experiment which created by take intersection b
 
 Authors
 ---
-Yu-Yu Lin, Yin-Hung Lin, Pei-Lung Chen, Yen-Jen Oyang and Chien-Yu Chen. 
+Yu-Yu Lin, Pei-Lung Chen, Yen-Jen Oyang and Chien-Yu Chen. 
 National Taiwan University, Taiwan.
