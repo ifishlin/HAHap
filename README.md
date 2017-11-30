@@ -22,7 +22,7 @@ Git clone and execute **bin/HAHap**.
 ```
 git clone https://github.com/ifishlin/HAHap
 cd HAHap/bin
-python HAHap phase vcf bam out
+python HAHap phase example.vcf example.bam out
 ```
 
 ```
