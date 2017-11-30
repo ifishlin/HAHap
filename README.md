@@ -35,7 +35,7 @@ OUT          VCF file with predicted haplotype. (HP tags)
 
 optional arguments:
 --mms            Minimum read mapping quality (default:0)
---lct            Threshold of low coverage pairs (default:median)
+--lct            Threshold of low coverage pairs (int, default:median)
 --embed_disable  Enable optimal search in embed case (default:enabled)
 --last_disable   Enable optimal search in ambiguous case (default:enabled) 
         
@@ -43,10 +43,11 @@ optional arguments:
 
 Data (Ashkenazim family)
 ---
-The answer set used in real data experiment which created by take intersection between 
+The answer set used in real data experiment which created by taking intersection between 
 
 * the haplotype prediction of 10xGenomics (ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio/analysis/10XGenomics_ChromiumGenome_LongRanger2.1_09302016/README) and 
-* the variants calling result on readsets (ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio/HG002_NA24385_son/NIST_Illumina_2x250bps/novoalign_bams/README) (caller, GATK HaplotypeCaller 3.6). 
+* the variants calling results on the read sets (ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio/HG002_NA24385_son/NIST_Illumina_2x250bps/novoalign_bams/README) (caller, GATK HaplotypeCaller 3.6). 
+* The input vcf files of real data experiment are located at /data 
 * The BAM of real data experiment is located at Base URL: ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio
     * Base_URL/HG002_NA24385_son/NIST_Illumina_2x250bps/novoalign_bams/HG002.hs37d5.2x250.bam
     * Base_URL/HG003_NA24149_father/NIST_Illumina_2x250bps/novoalign_bams/HG003.hs37d5.2x250.bam
