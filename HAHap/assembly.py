@@ -516,12 +516,26 @@ def ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, frag
         for rank in range(0, v1_cnt * v2_cnt):
             x, y, cs = get_max_cs(v1_name, v2_name, cs_mx, rank)
 
-            if (phase_total - merge_cnt) <= ops_cutoff and last_ops  and cs < -100:
-                # if phase_total - merge_cnt == 1 and last_ops:
-                last_ops_flag = True
+            #if (phase_total - merge_cnt) <= ops_cutoff and last_ops  and cs < -100:
+            #    last_ops_flag = True
 
             c1_node, c2_node, c1_idx, c2_idx = (vars_pool[v1_name], vars_pool[v2_name], x, y) \
                                     if y > x else (vars_pool[v2_name], vars_pool[v1_name], y, x)
+
+            
+            junction_cnt = 0
+            if len(c1_node.name_split) > len(c2_node.name_split):
+                for c in c2_node.name_split:
+                    junction_cnt = junction_cnt + 1 if c - 1 in c1_node.name_split else junction_cnt
+                    junction_cnt = junction_cnt + 1 if c + 1 in c1_node.name_split else junction_cnt
+            else:
+                for c in c1_node.name_split:
+                    junction_cnt = junction_cnt + 1 if c - 1 in c2_node.name_split else junction_cnt
+                    junction_cnt = junction_cnt + 1 if c + 1 in c2_node.name_split else junction_cnt
+
+            #if last_ops and cs < -1e10:
+            if last_ops  and cs < -1e10 and junction_cnt >= 2:
+                last_ops_flag = True 
 
             pv_key = get_pv_key(c1_idx, c2_idx, phase_total)
 
@@ -530,9 +544,6 @@ def ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, frag
 
             if pv_key in pairs_sup:
                 node = _ha_merge_two_nodes(c1_node, c2_node)
-                #print("name")
-                #print(c1_node.name, c2_node.name)
-                #print(node.name)
                 c1_anchor, c2_anchor = _get_anchors(c1_node, c2_node, c1_idx, c2_idx)
 
                 sorted_sup = sorted(pairs_sup[pv_key].items(), key=operator.itemgetter(1, 0), reverse=True)
