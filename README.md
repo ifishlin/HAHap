@@ -2,14 +2,15 @@
 
 About
 ---
-HAHap is a method to infer the haplotype using sequencing data. HAHap is not designed to solve the MEC problem. Instead, it attempts to eliminate the influence of noises through the process of assembly, though it remains the spirit of minimum error correc-tion in certain conditions. We develop an adjusted multinomial probabilistic metric for evaluating the reliability of a variant pair, and the derived scores guide the assembly process.
+HAHap is a method to infer haplotypes using sequencing data. It attempts to eliminate the influence of noises through the process of assembly, though it remains the spirit of minimum error correction in certain conditions. We developed an adjusted multinomial probabilistic metric for evaluating the reliability of a variant pair, and the derived scores guide the assembly process.
 
-The method is validated on DNA-seq short reads (Illumina HiSeq), and it supposed to handle all kinds of BAM files.
+HAHap takes BAM files as the input, and was validated using the short reads from the Illumina HiSeq platform.
+
 
 
 Required
 ---
-HAHap is a pure-python program. It required fellowing packages. 
+HAHap is a pure-python program. It requires the following packages. 
 
 * Python 3.x
 * Numpy (version >= 1.10)
@@ -30,24 +31,25 @@ usage: python HAHap phase [--mms MMS] [--lct LCT] [--embed] [--lastops] VCF BAM 
 
 positional arguments
 VCF          VCF file with heterozygous variants needed to be phased
-BAM          Read mapped file
+BAM          Read mapping file
 OUT          VCF file with predicted haplotype. (HP tags)
 
 optional arguments:
 --mms            Minimum read mapping quality (default:0)
---lct            Threshold of low coverage pairs (default:median)
---embed_disable  Enable optimal search in embed case (default:enabled)
---last_disable   Enable optimal search in ambiguous case (default:enabled) 
+--lct            Threshold of low-coverage pairs (int, default:median)
+--embed_disable  Enable optimal search in embedded cases (default:enabled)
+--last_disable   Enable optimal search in ambiguous cases (default:enabled) 
         
 ```
 
 Data (Ashkenazim family)
 ---
-The answer set used in real data experiment which created by take intersection between 
+The answer set used in the real-data experiment was created by taking the intersection between (1) and (2)
 
 * the haplotype prediction of 10xGenomics (ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio/analysis/10XGenomics_ChromiumGenome_LongRanger2.1_09302016/README) and 
-* the variants calling result on readsets (ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio/HG002_NA24385_son/NIST_Illumina_2x250bps/novoalign_bams/README) (caller, GATK HaplotypeCaller 3.6). 
-* The BAM of real data experiment is located at Base URL: ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio
+* the variant calling result of the read sets (ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio/HG002_NA24385_son/NIST_Illumina_2x250bps/novoalign_bams/README) (caller, GATK HaplotypeCaller 3.6). 
+* The input vcf files of the real-data experiment are located at /data
+* The BAM file used in the real-data experiment is located at Base_URL: ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/AshkenazimTrio
     * Base_URL/HG002_NA24385_son/NIST_Illumina_2x250bps/novoalign_bams/HG002.hs37d5.2x250.bam
     * Base_URL/HG003_NA24149_father/NIST_Illumina_2x250bps/novoalign_bams/HG003.hs37d5.2x250.bam
     * Base_URL/HG004_NA24143_mother/NIST_Illumina_2x250bps/novoalign_bams/HG004.hs37d5.2x250.bam
