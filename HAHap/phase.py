@@ -26,8 +26,8 @@ def add_arguments(parser):
     arg('output_file', metavar='OUT', help='VCF file with predicted haplotype. (HP tags)')
     arg('--mms', dest='mms', default=0, type=int, help='Minimum read mapping quality (default:0)')
     arg('--lct', dest='lct', default=0, type=int, help='Threshold of low coverage pairs (default:median)')
-    arg('--embed_disable', dest='embed_disable', action='store_false', help='Disable optimal search in embed case.')
-    arg('--last_disable', dest='last_disable', action='store_false', help='Disable optimal search in ambiguous case.')
+    #arg('--embed_disable', dest='embed_disable', action='store_false', help='Disable optimal search in embed case.')
+    #arg('--last_disable', dest='last_disable', action='store_false', help='Disable optimal search in ambiguous case.')
 
 
 def main(args):
@@ -37,8 +37,8 @@ def main(args):
     logger.info("=== Start HAHap phasing ===")
     logger.info("Parameters: Minimum mapping quality = " + str(args.mms))
     logger.info("Parameters: Threshold of low coverage " + ("... Median" if args.lct == 0 else "= " + str(args.lct)))
-    logger.info("Parameters: Embed optimal search ... " + ("Enable" if args.embed_disable == True else "Disable"))
-    logger.info("Parameters: Last optimal search ... " + ("Enable" if args.last_disable == True else "Disable"))
+    #logger.info("Parameters: Embed optimal search ... " + ("Enable" if args.embed_disable == True else "Disable"))
+    #logger.info("Parameters: Last optimal search ... " + ("Enable" if args.last_disable == True else "Disable"))
 
     timer = StageTimer()
 
@@ -144,9 +144,8 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer):
         timer.stop('05.create_pool')
 
         timer.start('06.ha_phasing')
-        #print(args.embed_disable, args.last_disable)
-        ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, args.embed_disable, args.last_disable, timer)
-        #ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, timer, args.embed_disable, fragments, fragment_se, args.read4, args.last_disable)
+        ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, True, True, timer)
+        #ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, args.embed_disable, args.last_disable, timer)
         timer.stop('06.ha_phasing')
 
         if len(vars_pool) > 1:

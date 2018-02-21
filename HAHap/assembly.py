@@ -534,7 +534,7 @@ def ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, frag
                     junction_cnt = junction_cnt + 1 if c + 1 in c2_node.name_split else junction_cnt
 
             #if last_ops and cs < -1e10:
-            if last_ops  and cs < -1e10 and junction_cnt >= 2:
+            if last_ops and cs < -1e10 and junction_cnt >= 2:
                 last_ops_flag = True 
 
             pv_key = get_pv_key(c1_idx, c2_idx, phase_total)
