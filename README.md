@@ -27,7 +27,7 @@ python HAHap phase vcf bam out
 ```
 
 ```
-usage: python HAHap phase [--mms MMS] [--lct LCT] VCF BAM OUT
+usage: python HAHap phase [--mms MMS] [--lct LCT] [--minj MINJ] [--pl PL] VCF BAM OUT
 
 positional arguments
 VCF          VCF file with heterozygous variants needed to be phased
