@@ -31,7 +31,7 @@ usage: python HAHap phase [--mms MMS] [--lct LCT] [--minj MINJ] [--pl PL] VCF BA
 
 positional arguments
 VCF          VCF file with heterozygous variants needed to be phased
-BAM          Read mapping file
+BAM          Read mapped file
 OUT          VCF file with predicted haplotype. (HP tags)
 
 optional arguments:
