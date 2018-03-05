@@ -37,7 +37,8 @@ OUT          VCF file with predicted haplotype. (HP tags)
 optional arguments:
 --mms            Minimum read mapping quality (default:0)
 --lct            Threshold of low-coverage pairs (int, default:median)
-        
+--minj           Minimum junctions number (default:4)
+--pl             The likelihood of P1 and P2 (default:0.49)        
 ```
 
 Data (Ashkenazim family)
