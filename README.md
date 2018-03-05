@@ -27,7 +27,7 @@ python HAHap phase vcf bam out
 ```
 
 ```
-usage: python HAHap phase [--mms MMS] [--lct LCT] [--embed] [--lastops] VCF BAM OUT
+usage: python HAHap phase [--mms MMS] [--lct LCT] VCF BAM OUT
 
 positional arguments
 VCF          VCF file with heterozygous variants needed to be phased
@@ -37,8 +37,6 @@ OUT          VCF file with predicted haplotype. (HP tags)
 optional arguments:
 --mms            Minimum read mapping quality (default:0)
 --lct            Threshold of low-coverage pairs (int, default:median)
---embed_disable  Enable optimal search in embedded cases (default:enabled)
---last_disable   Enable optimal search in ambiguous cases (default:enabled) 
         
 ```
 
