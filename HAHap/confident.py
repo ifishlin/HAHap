@@ -46,7 +46,7 @@ def _calc_n1_n2(outcome_sum, sol_cnt_0, sol_cnt_1):
     return n, n1, n2, n3
 
 
-def calc_cs_mx(pairs_sup, phase_loc, lct, distance=10, alpha=1):
+def calc_cs_mx(pairs_sup, phase_loc, lct, pl, distance=10, alpha=1):
     """
     Calc_priority_of_solutions:
     Calculate based on solutions(two unconficted outcomes).
@@ -66,8 +66,6 @@ def calc_cs_mx(pairs_sup, phase_loc, lct, distance=10, alpha=1):
         base = pairs_key // phase_total
         shift = pairs_key % phase_total
 
-        #print(base, shift, sups)
-
         sup = sorted(sups.items(), key=operator.itemgetter(1), reverse=True)
         pairs_total = sum([p[1] for p in sup])
 
@@ -81,7 +79,7 @@ def calc_cs_mx(pairs_sup, phase_loc, lct, distance=10, alpha=1):
                 if p_l != q_l and p_r != q_r:
                     singleton_observed = False
                     n, n1, n2, n3 = _calc_n1_n2(pairs_total, p[1], q[1])
-                    score = normalized_score_scale_to_max(n, n1, n2, p[1]+q[1], max_coverage, alpha)
+                    score = normalized_score_scale_to_max(n, n1, n2, p[1]+q[1], max_coverage, alpha, pl)
                     if distance == 5:
                         score -= abs(phase_loc[shift] - phase_loc[base]) * 1e-5
                     elif distance == 10:
@@ -102,7 +100,7 @@ def calc_cs_mx(pairs_sup, phase_loc, lct, distance=10, alpha=1):
 
             if singleton_observed:
                 n, n1, n2, n3 = _calc_n1_n2(p[1], p[1], 0)
-                score = normalized_score_scale_to_max(n, n1, n2, p[1], max_coverage, alpha) - 1e10
+                score = normalized_score_scale_to_max(n, n1, n2, p[1], max_coverage, alpha, pl) - 1e10
                 if lct == 0:
                     if pairs_total < q2:
                         score -= 1e12

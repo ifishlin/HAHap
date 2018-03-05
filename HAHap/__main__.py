@@ -5,7 +5,7 @@ from .args import HelpfulArgumentParser
 
 COMMANDS = [
     'phase',
-    'vcf2ans',
+    #'vcf2ans',
 ]
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ def ensure_pysam_version():
 def main(argv=sys.argv[1:]):
     ensure_pysam_version()
     parser = HelpfulArgumentParser(description=__doc__, prog='HAHap')
-    parser.add_argument('--version', action='version', version='%(prog)s ' + 'b0.1')
+    parser.add_argument('--version', action='version', version='%(prog)s ' + 'v1.0')
     parser.add_argument('--debug', action='store_true', default=False, help='Print debug messages')
 
     subparsers = parser.add_subparsers()

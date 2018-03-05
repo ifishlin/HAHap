@@ -87,7 +87,7 @@ def _ha_merge_two_nodes(c1_node, c2_node):
 
 def _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, c2_node,
                    phase_loc, phase_allele, codes, fragments,
-                   fragment_se, embed_ops, last_ops, timer):
+                   fragment_se, embed_ops, last_ops, timer, minj):
     """
     """
 
@@ -273,9 +273,9 @@ def _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, 
                     junction_cnt = junction_cnt + 1 if c + 1 in c2_node.name_split else junction_cnt
 
         # embedded threshold
-        embed_threshold = 3
-        if embed_ops and junction_cnt > embed_threshold:
-
+        # embed_threshold = 3
+        embed_threshold = minj
+        if embed_ops and junction_cnt >= embed_threshold:
             result = _local_pre_MEC_search(c1_node, c2_node, fragments, fragment_se, phase_loc, codes, timer)  
 
         else:
@@ -487,7 +487,7 @@ def merge_single_link_vector(reduced_mx, vector, i, j, timer):
 
     timer.stop("merge_single_link_vector")
 
-def ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, embed_ops, last_ops, timer):
+def ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, embed_ops, last_ops, timer, minj):
     """
     """
 
@@ -551,7 +551,7 @@ def ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, frag
                 timer.start("060._ha_phasing_main")
                 node.h1, node.h2 = _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, c2_node,
                                         phase_loc, phase_allele, codes,
-                                        fragments, fragment_se, embed_ops, last_ops_flag, timer)
+                                        fragments, fragment_se, embed_ops, last_ops_flag, timer, minj)
                 timer.stop("060._ha_phasing_main")
 
                 # careful for end condition? only one None?

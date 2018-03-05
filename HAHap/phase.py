@@ -26,7 +26,8 @@ def add_arguments(parser):
     arg('output_file', metavar='OUT', help='VCF file with predicted haplotype. (HP tags)')
     arg('--mms', dest='mms', default=0, type=int, help='Minimum read mapping quality (default:0)')
     arg('--lct', dest='lct', default=0, type=int, help='Threshold of low coverage pairs (default:median)')
-    #arg('--embed_disable', dest='embed_disable', action='store_false', help='Disable optimal search in embed case.')
+    arg('--minj', dest='minj', default=4, type=int, help='Minimum junctions number (default:4)')
+    arg('--pl', dest='pl', default=0.49, type=float, help='The likelihood of P1 and P2 (default:0.49)')
     #arg('--last_disable', dest='last_disable', action='store_false', help='Disable optimal search in ambiguous case.')
 
 
@@ -36,9 +37,17 @@ def main(args):
 
     logger.info("=== Start HAHap phasing ===")
     logger.info("Parameters: Minimum mapping quality = " + str(args.mms))
-    logger.info("Parameters: Threshold of low coverage " + ("... Median" if args.lct == 0 else "= " + str(args.lct)))
+    logger.info("Parameters: Threshold of low coverage " + ("= Median" if args.lct == 0 else "= " + str(args.lct)))
+    logger.info("Parameters: Minimum junction number = " + str(args.minj))
+    logger.info("Parameters: Likelihood of P1 and P2 = " + str(args.pl))
+    if args.pl*2 > 1:
+        logger.info("Parameters incorrect, (P1 + P2) = " + str(args.pl*2) + " > 1, the sum of likelihood is less than or equal to one.")
+        logger.info("Program exists")
+        return
+
     #logger.info("Parameters: Embed optimal search ... " + ("Enable" if args.embed_disable == True else "Disable"))
     #logger.info("Parameters: Last optimal search ... " + ("Enable" if args.last_disable == True else "Disable"))
+
 
     timer = StageTimer()
 
@@ -129,7 +138,7 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer):
             continue
         timer.stop('03.pv_dict')
         timer.start('04.calc_score_matrix')
-        cs_mx = calc_cs_mx(pairs_sup, phase_loc, args.lct)
+        cs_mx = calc_cs_mx(pairs_sup, phase_loc, args.lct, args.pl)
         timer.stop('04.calc_score_matrix')
         #print_var_matrix(sf_mx, fragment_se, codes, ':')
 
@@ -144,7 +153,7 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer):
         timer.stop('05.create_pool')
 
         timer.start('06.ha_phasing')
-        ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, True, True, timer)
+        ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, True, True, timer, args.minj)
         #ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, args.embed_disable, args.last_disable, timer)
         timer.stop('06.ha_phasing')
 

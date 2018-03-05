@@ -32,19 +32,19 @@ def calc_posterior(n, n1, n2, ref, h1, h2):
     return likelihood(n, n1, n2) + prior(ref, h1, h2)
 '''
 
-def score(n, n1, n2):
-    mp1 = 0.49
-    mp2 = 0.49
-    mp3 = 0.02
+def score(n, n1, n2, pl):
+    mp1 = pl
+    mp2 = pl
+    mp3 = 1 - pl*2
     n3 = n - n1 - n2
     return n1 * log(mp1, 2) + n2 * log(mp2, 2) + n3 * log(mp3, 2) + log(combination(n, n1), 2) \
         + log(combination(n - n1, n2), 2)
 
 
-def normalized_factor(n):
-    mp1 = 0.49
-    mp2 = 0.49
-    mp3 = 0.02
+def normalized_factor(n, pl):
+    mp1 = pl
+    mp2 = pl
+    mp3 = 1 - pl*2
     n3 = round(n * mp3)
     if (n-n3) % 2 == 0:
         n1 = (n - n3)/2
@@ -60,8 +60,8 @@ def sigmoid(x, alpha):
     return 1 / (1 + exp(alpha*(-x + 0.5)))
 
 
-def normalized_score_scale_to_max(n, n1, n2, orignal_n, max_sample_size, alpha):
+def normalized_score_scale_to_max(n, n1, n2, orignal_n, max_sample_size, alpha, pl):
     """scale should put it here"""
-    p = score(n, n1, n2) - normalized_factor(n)
+    p = score(n, n1, n2, pl) - normalized_factor(n, pl)
     return log(sigmoid(orignal_n/max_sample_size, alpha) * pow(2, p), 2)
     #return log(sigmoid(orignal_n/max_sample_size, alpha) * p, 2)
