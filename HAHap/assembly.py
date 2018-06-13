@@ -91,7 +91,6 @@ def _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, 
     """
     """
 
-    timer.start("061.reasonable solution")
     #if c1_idx >= c2_idx:
     #    sys.exit()
 
@@ -139,8 +138,6 @@ def _ha_phasing_main(sorted_sup, c1_anchor, c2_anchor, c1_idx, c2_idx, c1_node, 
 
     result = []
 
-
-    timer.stop("061.reasonable solution")
 
     # ambigeous pairs remain only
     if last_ops and not (c1_anchor is None and c2_anchor is None):

@@ -31,19 +31,13 @@ class InputVcfReader(object):
         if self.reads_proxy is None:
             self.reads_proxy = pysam.AlignmentFile(self.bam_file, "rb")
 
-        timer.start('021._read_variance_faster') 
         self._read_variance_faster(chrom, fragments, phase_loc, phase_allele, self.trust, timer)
-        timer.stop('021._read_variance_faster')
 
-        timer.start('022.clear_matrix')
         self.clear_matrix(fragments) #?
-        timer.stop('022.clear_matrix')
 
         sf_mx = lil_matrix((len(fragments), len(phase_loc)), dtype=np.int8)
 
-        timer.start('023.produce_var_matrix')
         fragment_se = self._fill_sf_mx(sf_mx, fragments, phase_loc, self.coding)
-        timer.stop('023.produce_var_matrix')
 
         return sf_mx, fragments, fragment_se, self.coding
 
@@ -72,19 +66,14 @@ class InputVcfReader(object):
         removed_set = set()
 
         #print("==", chrom, f_loc, l_loc)
-        timer.start('024.fetch')
         for read in self.reads_proxy.fetch(chrom, f_loc, l_loc):
-            timer.stop('024.fetch')
 
-            timer.start('024.if')
             if read.mapping_quality < self.min_read_quality:
                 continue
 
             if not read.is_proper_pair:
                 continue
-            timer.stop('024.if')
 
-            timer.start('024.id')
             read_id = read.query_name
             r_st = read.reference_start
             # read.reference_end does not involved
@@ -97,7 +86,6 @@ class InputVcfReader(object):
             else:
                 read_id = read.query_name + "_" + str(read.reference_start)
             '''
-            timer.stop('024.id') 
 
             #timer.start('024.align0')
             #allele = ''
@@ -115,12 +103,8 @@ class InputVcfReader(object):
             #timer.start('024.align4')
             #chn = [i for j in [range(r[0], r[1]+1) for r in region] for i in j]
             #timer.stop('024.align4')
-            timer.start('024.align5')
             chn2 = range(r_st, r_ed + 1)
-            timer.stop('024.align5')
 
-
-            timer.start('024.loop')
             for var_idx, v in enumerate(phase_loc):
                 v_0_base = v - 1
 
@@ -132,7 +116,6 @@ class InputVcfReader(object):
                 #if v_0_base in chn:
                 #if v_0_base in range(read.reference_start, read.reference_end):
                 if v_0_base in chn2:
-                    timer.start('024.loop_pre')
                     #t = trans_loc_to_cigaridx(v_0_base, region)
                     r = trans_loc_to_alignidx(v_0_base, r_st, read.cigartuples)
                     if r is None:
@@ -180,8 +163,6 @@ class InputVcfReader(object):
                         is_pair_read = False
                         visited_set.add(read_id)
 
-                    timer.stop('024.loop_pre')
-                    timer.start('024.overlap')
                     if read_id in fragments:
                         if not is_pair_read:
                             fragments[read_id].append((chrom, v, allele, ''))
@@ -198,17 +179,9 @@ class InputVcfReader(object):
                                 fragment.append((chrom, v, allele, '')) 
                     else:
                         fragments[read_id] = [(chrom, v, allele, '')]
-                    timer.stop('024.overlap')
-
-            timer.stop('024.loop')
-            timer.start('024.fetch')
-        timer.stop('024.fetch')
-        timer.start('025.removed_set')
 
         for i in removed_set:
             del fragments[i]
-        timer.stop('025.removed_set')
-
 
         return
 

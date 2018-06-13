@@ -60,23 +60,18 @@ def main(args):
         logger.info("")
         logger.info("=== Build Connected Component ===")
         var_loc = list(map(int, var_str_loc))
-        timer.start("00.blocks_main")
         connected_component = blocks_main(args, str(chrom), var_loc, timer)
-        timer.stop("00.blocks_main")
         logger.info("Chromosome " + str(chrom))
         logger.info("Found variant block : " + str(len(connected_component)))
         logger.info("Phaing proceeding ... ")
         pipeline(args, str(chrom), connected_component, var_allele, var_str_loc, timer)
         logger.info("Phaing end and Output results")
-    #_timer_summary(timer)
 
     logger.info("")
     logger.info("=== End HAHap phasing ===")
     logger.info("")
-    #_timer_summary(timer)
 
 def _timer_summary(timer):
-    print("_timer_summary")
     total = timer.total()
     sorted_x = sorted(timer.tags())
     for k, v in sorted_x:
@@ -104,73 +99,54 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer):
 
         #  build phase instance from blocks search directly
 
-        timer.start('01.prepare')
         phase_allele = [(var_allele[c][0], var_allele[c][1]) for c in cc_sorted]
         phase_loc = [int(var_loc[c]) for c in cc_sorted]
         phase_total = len(phase_loc)
-        timer.stop('01.prepare')
 
         #print(phase_loc)
 
         #  build matrix creater
-        timer.start('02.prepare2')
         if reader is None:
             reader = InputVcfReader(args.bam_file, args.mms)
         #else:
         #    reader.reset(args.bam_file, 0, args.mms)
-        timer.stop('02.prepare2')
 
         # SNP-fragment matrix
-        timer.start('02.get_readmtx')
         sf_mx, fragments, fragment_se, codes = reader.get_sf_mx(chrom, phase_loc, phase_allele, timer)
-        timer.stop('02.get_readmtx')
         if len(fragment_se) == 0:
             remove_dict[cc_idx] = None
             #print("No qualified fragment")
             continue
 
-        timer.start('03.pv_dict')
         pairs_sup = create_pairs_sup(fragment_se, phase_total, sf_mx)
 
         if len(pairs_sup) == 0:
             remove_dict[cc_idx] = None
             #print("No trusted allele")
             continue
-        timer.stop('03.pv_dict')
-        timer.start('04.calc_score_matrix')
         cs_mx = calc_cs_mx(pairs_sup, phase_loc, args.lct, args.pl)
-        timer.stop('04.calc_score_matrix')
         #print_var_matrix(sf_mx, fragment_se, codes, ':')
 
         vars_pool = dict()
 
-        timer.start('05.create_pool')
         for i in range(len(phase_loc)):
             # vars idx and vars loc
             node = HiMergeNode(str(i), phase_loc[i])
             # node.name = str(i)
             vars_pool[node.name] = node
-        timer.stop('05.create_pool')
 
-        timer.start('06.ha_phasing')
         ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, True, True, timer, args.minj)
         #ha_phasing(vars_pool, pairs_sup, cs_mx, phase_loc, phase_allele, codes, fragments, fragment_se, args.embed_disable, args.last_disable, timer)
-        timer.stop('06.ha_phasing')
 
         if len(vars_pool) > 1:
-            timer.start('07.check_null')
             od = collections.OrderedDict(sorted(vars_pool.items(), reverse=True))
             r_list = []
             for k in od.keys():
                 r_list.append(list(map(int, k.split('_'))))
             remove_dict[cc_idx] = r_list
-            timer.stop('07.check_null')
 
-        timer.start('08.output')
         save_phasing(vars_pool, phase_loc, output_dict)
-        timer.stop('08.output')
 
-    timer.start('09.check_null2')
     rod = collections.OrderedDict(sorted(remove_dict.items(), reverse=True))
     for k, value in rod.items():
         item = connected_component[k]
@@ -179,8 +155,5 @@ def pipeline(args, chrom, connected_component, var_allele, var_loc, timer):
                 insert = [item[i] for i in v]        
                 connected_component.insert(k+1, insert)
         del connected_component[k]
-    timer.stop('09.check_null2')
 
-    timer.start('08.output')
     output_phasing2VCF(args.variant_file, args.output_file, output_dict, chrom, codes)
-    timer.stop('08.output')

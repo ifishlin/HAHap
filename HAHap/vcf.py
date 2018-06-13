@@ -7,6 +7,11 @@ def output_phasing2VCF(input_vcf, output_file, output_dict, chrom, encoding_tabl
     """
     with open(output_file, "a") as myfile:
         input_file = open(input_vcf, 'r')
+        myfile.write("##fileformat=VCFv4.1\n")
+        myfile.write("##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n")
+        myfile.write("##FORMAT=<ID=PS,Number=1,Type=Integer,Description=\"Phase set identifier\">\n")
+        myfile.write("##FORMAT=<ID=HP,Number=.,Type=String,Description=\"Read-backed phasing haplotype identifiers\">\n")
+        myfile.write("#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE\n")
         for line in input_file:
             # line = line.strip()
             e = line.split('\t')
@@ -46,7 +51,7 @@ def split_vcf_by_chrom(variant_file, indel=False):
         if c != chrom:
             if chrom is not None:
                 logger.info("Found variants : " + str(len(vars_str_loc)) + "\n")
-                var_chrom_dict[int(chrom)] = [vars_allele, vars_str_loc]
+                var_chrom_dict[chrom] = [vars_allele, vars_str_loc]
                 logger.info("Reading Chromosome " + c)
             else:
                 logger.info("Reading Chromosome " + c)
@@ -72,6 +77,6 @@ def split_vcf_by_chrom(variant_file, indel=False):
             vars_str_loc.append(i)
 
     logger.info("Chromosome " + chrom + ". Found variants : " + str(len(vars_str_loc)))
-    var_chrom_dict[int(chrom)] = [vars_allele, vars_str_loc]
+    var_chrom_dict[chrom] = [vars_allele, vars_str_loc]
 
     return var_chrom_dict

@@ -128,28 +128,12 @@ def main(args, chrom, vars_loc, timer):
 
     region_g = guess_block(vars_loc)
 
-    '''
-    print(vars_loc)
-    print(len(vars_loc))
-    print(region_g)
-
-    num = 0
-    for r in region_g:
-       num += len(r)
-
-    print(num)
-    '''
-    timer.start('000.head') 
     vars_loc.append(sys.maxsize)
     len_locus = len(vars_loc)
     locus_listed_dict = [set() for i in range(len_locus - 1)]
     #print(locus_listed_dict)
 
-    timer.stop('000.head')
-    timer.start('000.open')
     samfile = pysam.AlignmentFile(args.bam_file, "rb")
-    timer.stop('000.open')
-    timer.start('000.head')
     header = samfile.header
 
     PG = header['PG']
@@ -159,26 +143,28 @@ def main(args, chrom, vars_loc, timer):
 
     reference_name = [q['SN'] for q in SQ]
 
+
+    if chrom not in reference_name:
+        logger.info("")
+        logger.info("=== Chrom '"+chrom+"' not found in reference(SN) of BAM file. ===")
+        logger.info("=== Please check data. Program exit ===")
+        sys.exit(0)
+        
+
     read_map = dict()
     read_saw = dict()
-    timer.stop('000.head')
-    timer.start('000.loopr')
     # 0-based, end value not included
     for r in region_g:
         #print(r[0]-1, r[-1])
-        timer.start('000.fetch')
         iter1 = samfile.fetch(reference=chrom, start=r[0]-1, end=r[-1])
-        timer.stop('000.fetch')
         #iter1 = samfile.fetch(reference=chrom, start=vars_loc[0]-1, end=vars_loc[-2])
 
         #count = 0
         pre_locus = 0
         pre_c = 0
         c = 0
-        timer.start('000.loop')
         for read in iter1:
             #count += 1
-            timer.start('000.id')
             r_st = read.reference_start
             r_name = read.query_name
             rid = r_name + "_" + str(r_st)
@@ -188,31 +174,17 @@ def main(args, chrom, vars_loc, timer):
             else:
                 rid = r_name + "_" + str(r_st)
             '''
-            timer.stop('000.id')
-
-            timer.start('000.saw')
             if rid in read_saw:
                 continue
             read_saw[rid] = 0
-            timer.stop('000.saw')
 
-            timer.start('000.if')
             if not read.is_proper_pair or read.mapping_quality < args.mms:
                 continue
-            timer.stop('000.if')
 
-            timer.start('000.connect')
             connected = set()
-            timer.stop('000.connect')
-            timer.start('000.pre')
             s = r_st + 1  # transfer 0-base to 1-base
-            timer.stop('000.pre')
-
-            timer.start('000.pre2')
             key = r_name
 
-            timer.stop('000.pre2')
-            timer.start('000.bisect')
             if s > pre_locus:
                 c = bisect_left(vars_loc, s)
                 # c = b_search_while(vars_loc, s)
@@ -220,29 +192,21 @@ def main(args, chrom, vars_loc, timer):
                 pre_locus = vars_loc[c]
             else:
                 c = pre_c
-            timer.stop('000.bisect')
 
-            timer.start('003.trans')
             region = trans_cigartuples_to_region(s, read.cigartuples)
-            timer.stop('003.trans')
-            timer.start('001.search')
             for s, e in region:
                 while c < len_locus and vars_loc[c] <= e:
                     connected.add(c)
                     c += 1
-            timer.stop('001.search')
 
             #if key == "D00360:96:H2YLYBCXX:2:1110:15666:78863_14690":
             #    print(connected)            
 
             '''
-            timer.start('000.pre2')
             if len(connected) > 0:
                 key = read.query_name
-            timer.stop('000.pre2')
             '''
 
-            timer.start('002.putin')
             #print(read_map)
             if key in read_map:
                 #print("AAA")
@@ -253,29 +217,19 @@ def main(args, chrom, vars_loc, timer):
             else:
                 #print("BBB")
                 read_map[key] = connected
-            timer.stop('002.putin')
         #print(count)
-        timer.stop('000.loop')
 
-    timer.stop('000.loopr')
-    timer.start("000.end")
     for k, v in read_map.items():
         make_pair_connected(v, locus_listed_dict)
 
-    timer.stop("000.end")
-
-    timer.start("000.close")
     samfile.close()
-    timer.stop("000.close")
 
     connected_component = []
   
-    timer.start('003.walk') 
     walked = set()
     for i in range(len(vars_loc) - 1):
         cc = []
         build_cc(locus_listed_dict, i, cc, walked)
         if len(cc) > 1:
             connected_component.append(sorted(cc))
-    timer.stop('003.walk')
     return connected_component
