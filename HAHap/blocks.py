@@ -136,10 +136,10 @@ def main(args, chrom, vars_loc, timer):
     samfile = pysam.AlignmentFile(args.bam_file, "rb")
     header = samfile.header
 
-    PG = header['PG']
+    #PG = header['PG']
     SQ = header['SQ']
-    RG = header['RG']
-    HD = header['HD']
+    #RG = header['RG']
+    #HD = header['HD']
 
     reference_name = [q['SN'] for q in SQ]
 
