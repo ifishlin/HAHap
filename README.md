@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/ifishlin/HAHap.svg?branch=master)](https://travis-ci.org/ifishlin/HAHap)
+
 # HAHap: A read-based haplotyping method using hierarchical assembly
 
 About
