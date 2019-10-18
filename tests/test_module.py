@@ -1,4 +1,4 @@
-from libs.module import Module
+from module import Module
 
 
 def test_get_true_func():
